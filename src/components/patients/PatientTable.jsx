@@ -1,0 +1,73 @@
+import { calculateRemainingSessions, getPatientStatus } from '../../utils/patient'
+
+function PatientTable({ patients, onEdit, onDelete }) {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-noble-200 bg-white shadow-card">
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-noble-200 text-sm">
+          <thead className="bg-noble-100">
+            <tr>
+              <th className="px-4 py-3 text-left font-semibold text-noble-700">Paciente</th>
+              <th className="px-4 py-3 text-left font-semibold text-noble-700">Telefone</th>
+              <th className="px-4 py-3 text-left font-semibold text-noble-700">Sessões</th>
+              <th className="px-4 py-3 text-left font-semibold text-noble-700">Status</th>
+              <th className="px-4 py-3 text-right font-semibold text-noble-700">Ações</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-noble-100">
+            {patients.map((patient) => {
+              const remaining = calculateRemainingSessions(patient.totalSessions, patient.completedSessions)
+              const status = getPatientStatus(patient)
+
+              return (
+                <tr key={patient.id} className="hover:bg-plum-50/40">
+                  <td className="px-4 py-3">
+                    <p className="font-semibold text-noble-800">{patient.name}</p>
+                    <p className="text-xs text-noble-500">Responsável: {patient.guardian}</p>
+                  </td>
+                  <td className="px-4 py-3 text-noble-700">{patient.phone}</td>
+                  <td className="px-4 py-3 text-noble-700">
+                    <p>Total: {patient.totalSessions}</p>
+                    <p>Realizadas: {patient.completedSessions}</p>
+                    <p className="font-semibold text-plum-700">Restantes: {remaining}</p>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                        status === 'Ativo'
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : 'bg-gold-100 text-gold-700'
+                      }`}
+                    >
+                      {status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onEdit(patient)}
+                        className="rounded-lg border border-plum-300 px-3 py-1.5 font-medium text-plum-700 hover:bg-plum-50"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onDelete(patient)}
+                        className="rounded-lg border border-red-300 px-3 py-1.5 font-medium text-red-700 hover:bg-red-50"
+                      >
+                        Excluir
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+export default PatientTable
