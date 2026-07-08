@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import ScheduleModal from '../components/patients/ScheduleModal'
 import { removeSchedule } from '../services/scheduleService'
 import { useAuth } from '../contexts/useAuth'
+import { getWhatsAppReminderLink } from '../utils/whatsappHelper'
 
 // Nomes dos meses e dias da semana
 const MONTHS = [
@@ -223,6 +224,9 @@ function AgendaPage() {
           ) : (
             <div className="space-y-4 overflow-y-auto max-h-[350px] pr-1">
               {selectedDaySchedules.map((sch) => {
+                const patientPhone = patients.find((p) => p.id === sch.patientId)?.phone || ''
+                const waLink = getWhatsAppReminderLink(patientPhone, sch.patientName, sch.date, sch.startTime)
+
                 const badgeColor = {
                   Terapia: 'bg-plum-100 dark:bg-plum-950/40 text-plum-700 dark:text-plum-300',
                   Avaliação: 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300',
@@ -235,18 +239,28 @@ function AgendaPage() {
                     className="group relative rounded-xl border border-noble-200 dark:border-noble-800 bg-white dark:bg-noble-950 p-4 shadow-sm hover:border-noble-300 dark:hover:border-noble-700 transition"
                   >
                     {/* Botões de Ação na Linha */}
-                    <div className="absolute right-3 top-3 flex gap-2 opacity-0 group-hover:opacity-100 transition">
+                    <div className="absolute right-3 top-3 flex gap-3 opacity-0 group-hover:opacity-100 transition">
+                      {patientPhone && (
+                        <a
+                          href={waLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-green-600 dark:text-green-400 hover:underline flex items-center gap-0.5 font-semibold"
+                        >
+                          Lembrete 💬
+                        </a>
+                      )}
                       <button
                         type="button"
                         onClick={() => openEditModal(sch)}
-                        className="text-xs text-plum-600 dark:text-plum-400 hover:underline"
+                        className="text-xs text-plum-600 dark:text-plum-400 hover:underline font-semibold"
                       >
                         Editar
                       </button>
                       <button
                         type="button"
                         onClick={() => handleDeleteSchedule(sch)}
-                        className="text-xs text-red-500 hover:underline"
+                        className="text-xs text-red-500 hover:underline font-semibold"
                       >
                         Desmarcar
                       </button>
