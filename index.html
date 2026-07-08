@@ -1,13 +1,36 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>sistema-fonoaudiologia</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#4C1D95" />
+    <title>FonoFlow - Gestão Fonoaudiológica</title>
+
+    <!-- Manifest e Suporte PWA (Android / Windows) -->
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- Tags de Suporte Standalone para iOS (Safari / iPhone) -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="FonoFlow" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    
+    <!-- Registro do Service Worker do PWA -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').then((reg) => {
+            console.log('FonoFlow PWA Service Worker registrado com sucesso!');
+          }).catch((err) => {
+            console.error('Falha ao registrar Service Worker do PWA:', err);
+          });
+        });
+      }
+    </script>
   </body>
 </html>
