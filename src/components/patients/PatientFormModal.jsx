@@ -69,15 +69,15 @@ function PatientFormModal({ isOpen, onClose, onSubmit, loading, patient }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="max-h-[95vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
+      <div className="max-h-[95vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white dark:bg-noble-900 p-6 shadow-2xl transition-colors duration-200">
         <div className="mb-6 flex items-center justify-between">
-          <h3 className="text-xl font-bold text-noble-800">
+          <h3 className="text-xl font-bold text-noble-800 dark:text-noble-100">
             {patient ? 'Editar paciente' : 'Novo paciente'}
           </h3>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-noble-300 px-3 py-1.5 text-sm text-noble-600"
+            className="rounded-lg border border-noble-300 dark:border-noble-700 px-3 py-1.5 text-sm text-noble-600 dark:text-noble-450 hover:bg-noble-50 dark:hover:bg-noble-800 transition"
           >
             Fechar
           </button>
@@ -95,9 +95,9 @@ function PatientFormModal({ isOpen, onClose, onSubmit, loading, patient }) {
           <InputField label="Total contratado" type="number" min={1} name="totalSessions" value={values.totalSessions} onChange={handleChange} error={errors.totalSessions} required />
           <InputField label="Sessões realizadas" type="number" min={0} name="completedSessions" value={values.completedSessions} onChange={handleChange} error={errors.completedSessions} required />
 
-          <div className="rounded-xl border border-gold-200 bg-gold-100/40 p-4">
-            <p className="text-xs uppercase tracking-wide text-gold-600">Sessões restantes</p>
-            <p className="text-2xl font-bold text-gold-600">{remainingSessions}</p>
+          <div className="rounded-xl border border-gold-200 dark:border-gold-900/60 bg-gold-100/40 dark:bg-gold-950/10 p-4 transition-colors duration-200">
+            <p className="text-xs uppercase tracking-wide text-gold-600 dark:text-gold-400">Sessões restantes</p>
+            <p className="text-2xl font-bold text-gold-600 dark:text-gold-400">{remainingSessions}</p>
           </div>
 
           <div className="md:col-span-2">
@@ -115,7 +115,7 @@ function PatientFormModal({ isOpen, onClose, onSubmit, loading, patient }) {
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-noble-300 px-5 py-2.5 text-sm font-semibold text-noble-700"
+              className="rounded-lg border border-noble-300 dark:border-noble-700 px-5 py-2.5 text-sm font-semibold text-noble-700 dark:text-noble-300 hover:bg-noble-50 dark:hover:bg-noble-800 transition"
             >
               Cancelar
             </button>

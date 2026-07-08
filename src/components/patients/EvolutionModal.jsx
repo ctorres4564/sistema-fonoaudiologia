@@ -113,17 +113,17 @@ function EvolutionModal({ isOpen, onClose, patient }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="flex h-[90vh] w-full max-w-4xl flex-col rounded-2xl bg-white p-6 shadow-2xl">
+      <div className="flex h-[90vh] w-full max-w-4xl flex-col rounded-2xl bg-white dark:bg-noble-900 p-6 shadow-2xl transition-colors duration-200">
         {/* Cabeçalho */}
-        <div className="mb-4 flex items-center justify-between border-b border-noble-100 pb-3">
+        <div className="mb-4 flex items-center justify-between border-b border-noble-100 dark:border-noble-800 pb-3">
           <div>
-            <h3 className="text-xl font-bold text-noble-800">Evolução Clínica</h3>
-            <p className="text-sm text-noble-500">Paciente: <strong className="text-noble-700">{patient.name}</strong></p>
+            <h3 className="text-xl font-bold text-noble-800 dark:text-noble-100">Evolução Clínica</h3>
+            <p className="text-sm text-noble-500 dark:text-noble-400">Paciente: <strong className="text-noble-700 dark:text-noble-300">{patient.name}</strong></p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-noble-300 px-3 py-1.5 text-sm font-semibold text-noble-600 hover:bg-noble-50"
+            className="rounded-lg border border-noble-300 dark:border-noble-700 px-3 py-1.5 text-sm font-semibold text-noble-600 dark:text-noble-400 hover:bg-noble-50 dark:hover:bg-noble-800 transition"
           >
             Fechar
           </button>
@@ -132,8 +132,8 @@ function EvolutionModal({ isOpen, onClose, patient }) {
         {/* Corpo com Grid de Duas Colunas */}
         <div className="grid flex-1 grid-cols-1 gap-6 overflow-hidden md:grid-cols-2">
           {/* Coluna Esquerda: Nova Evolução */}
-          <div className="flex flex-col border-r border-noble-100 pr-0 md:pr-6 overflow-y-auto">
-            <h4 className="mb-4 text-base font-bold text-noble-800">Registrar Sessão</h4>
+          <div className="flex flex-col border-r border-noble-100 dark:border-noble-800 pr-0 md:pr-6 overflow-y-auto">
+            <h4 className="mb-4 text-base font-bold text-noble-800 dark:text-noble-100">Registrar Sessão</h4>
             <form onSubmit={handleSubmit} className="space-y-4">
               <InputField
                 label="Data da Sessão"
@@ -161,16 +161,16 @@ function EvolutionModal({ isOpen, onClose, patient }) {
                 required
               />
 
-              <div className="flex items-center gap-2 rounded-xl bg-plum-50/50 p-3.5 border border-plum-100">
+              <div className="flex items-center gap-2 rounded-xl bg-plum-50/50 dark:bg-plum-950/20 p-3.5 border border-plum-100 dark:border-plum-900/60">
                 <input
                   type="checkbox"
                   id="incrementSession"
                   name="incrementSession"
                   checked={formValues.incrementSession}
                   onChange={handleChange}
-                  className="h-4 w-4 rounded border-noble-300 text-plum-600 focus:ring-plum-500"
+                  className="h-4 w-4 rounded border-noble-300 dark:border-noble-700 text-plum-600 focus:ring-plum-500"
                 />
-                <label htmlFor="incrementSession" className="text-xs font-semibold text-plum-900 cursor-pointer">
+                <label htmlFor="incrementSession" className="text-xs font-semibold text-plum-900 dark:text-plum-300 cursor-pointer">
                   Incrementar automaticamente +1 sessão realizada no cadastro do paciente.
                 </label>
               </div>
@@ -187,15 +187,15 @@ function EvolutionModal({ isOpen, onClose, patient }) {
 
           {/* Coluna Direita: Histórico */}
           <div className="flex flex-col overflow-y-auto">
-            <h4 className="mb-4 text-base font-bold text-noble-800">Histórico de Atendimentos</h4>
+            <h4 className="mb-4 text-base font-bold text-noble-800 dark:text-noble-100">Histórico de Atendimentos</h4>
             {loadingList ? (
               <div className="flex flex-1 items-center justify-center py-10">
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-plum-200 border-t-plum-600" />
               </div>
             ) : evolutions.length === 0 ? (
               <div className="flex flex-1 flex-col items-center justify-center py-10 text-center">
-                <p className="text-sm font-medium text-noble-500">Nenhuma evolução registrada para este paciente.</p>
-                <p className="text-xs text-noble-400 mt-1">Utilize o formulário ao lado para registrar o primeiro atendimento.</p>
+                <p className="text-sm font-medium text-noble-500 dark:text-noble-400">Nenhuma evolução registrada para este paciente.</p>
+                <p className="text-xs text-noble-400 dark:text-noble-500 mt-1">Utilize o formulário ao lado para registrar o primeiro atendimento.</p>
               </div>
             ) : (
               <div className="space-y-4 pr-1">
@@ -207,7 +207,7 @@ function EvolutionModal({ isOpen, onClose, patient }) {
                   return (
                     <div
                       key={evol.id}
-                      className="rounded-xl border border-noble-200 bg-white p-4 shadow-sm relative group hover:border-noble-300"
+                      className="rounded-xl border border-noble-200 dark:border-noble-800 bg-white dark:bg-noble-950 p-4 shadow-sm relative group hover:border-noble-300 dark:hover:border-noble-700 transition-all duration-200"
                     >
                       <button
                         type="button"
@@ -217,14 +217,14 @@ function EvolutionModal({ isOpen, onClose, patient }) {
                         Excluir
                       </button>
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="rounded bg-noble-100 px-2 py-0.5 text-xs font-semibold text-noble-600">
+                        <span className="rounded bg-noble-100 dark:bg-noble-800 px-2 py-0.5 text-xs font-semibold text-noble-600 dark:text-noble-300">
                           {formattedDate}
                         </span>
-                        <span className="text-xs text-noble-500">
+                        <span className="text-xs text-noble-500 dark:text-noble-400">
                           {evol.duration} min
                         </span>
                       </div>
-                      <p className="whitespace-pre-wrap text-sm text-noble-700 leading-relaxed font-sans">{evol.notes}</p>
+                      <p className="whitespace-pre-wrap text-sm text-noble-700 dark:text-noble-300 leading-relaxed font-sans">{evol.notes}</p>
                     </div>
                   )
                 })}

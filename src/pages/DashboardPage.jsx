@@ -13,8 +13,8 @@ function DashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-noble-800">Dashboard</h2>
-        <p className="text-sm text-noble-500">Visão geral dos indicadores do tratamento.</p>
+        <h2 className="text-2xl font-bold text-noble-800 dark:text-noble-100">Dashboard</h2>
+        <p className="text-sm text-noble-500 dark:text-noble-400">Visão geral dos indicadores do tratamento.</p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">

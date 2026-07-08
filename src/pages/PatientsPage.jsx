@@ -96,10 +96,10 @@ function PatientsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 rounded-2xl border border-noble-200 bg-white p-5 shadow-card md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-4 rounded-2xl border border-noble-200 dark:border-noble-800 bg-white dark:bg-noble-900 p-5 shadow-card md:flex-row md:items-center md:justify-between transition-colors duration-200">
         <div>
-          <h2 className="text-2xl font-bold text-noble-800">Pacientes</h2>
-          <p className="text-sm text-noble-500">Cadastro completo, controle de sessões e evolução clínica.</p>
+          <h2 className="text-2xl font-bold text-noble-800 dark:text-noble-100">Pacientes</h2>
+          <p className="text-sm text-noble-500 dark:text-noble-400">Cadastro completo, controle de sessões e evolução clínica.</p>
         </div>
 
         <button
@@ -111,14 +111,14 @@ function PatientsPage() {
         </button>
       </div>
 
-      <div className="rounded-2xl border border-noble-200 bg-white p-4 shadow-card">
-        <label className="text-xs uppercase tracking-wide text-noble-500">Pesquisar por nome ou telefone</label>
+      <div className="rounded-2xl border border-noble-200 dark:border-noble-800 bg-white dark:bg-noble-900 p-4 shadow-card transition-colors duration-200">
+        <label className="text-xs uppercase tracking-wide text-noble-500 dark:text-noble-400">Pesquisar por nome ou telefone</label>
         <input
           type="text"
           placeholder="Ex.: Maria ou (11) 99999-9999"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          className="mt-2 w-full rounded-xl border border-noble-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-plum-300"
+          className="mt-2 w-full rounded-xl border border-noble-200 dark:border-noble-700 bg-white dark:bg-noble-800 text-noble-800 dark:text-noble-100 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-plum-300 transition-colors duration-200"
         />
       </div>
 
