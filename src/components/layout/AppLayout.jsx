@@ -17,9 +17,12 @@ function AppLayout({ children }) {
             <button
               type="button"
               onClick={() => setIsSidebarOpen(true)}
-              className="rounded-lg border border-noble-300 dark:border-noble-700 px-3 py-2 text-sm font-medium text-noble-700 dark:text-noble-300 hover:bg-noble-100 dark:hover:bg-noble-800 md:hidden"
+              className="rounded-xl border border-noble-300 dark:border-noble-700 p-2 text-noble-700 dark:text-noble-300 hover:bg-noble-100 dark:hover:bg-noble-800 md:hidden transition-colors"
+              aria-label="Abrir Menu"
             >
-              Menu
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
             </button>
             <div>
               <h2 className="text-lg font-bold text-noble-800 dark:text-noble-100">Sistema de Gestão de Pacientes</h2>
