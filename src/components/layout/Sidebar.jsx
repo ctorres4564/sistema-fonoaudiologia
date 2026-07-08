@@ -1,6 +1,5 @@
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../../contexts/useAuth'
-import { useTheme } from '../../contexts/useTheme'
 
 const links = [
   { to: '/dashboard', label: 'Dashboard' },
@@ -10,7 +9,6 @@ const links = [
 
 function Sidebar({ open, onClose }) {
   const { user, logout } = useAuth()
-  const { isDark, toggleTheme } = useTheme()
 
   const handleLogout = async () => {
     await logout()
@@ -51,15 +49,6 @@ function Sidebar({ open, onClose }) {
             </NavLink>
           ))}
         </nav>
-
-        <button
-          type="button"
-          onClick={toggleTheme}
-          className="mb-4 flex items-center justify-between rounded-xl border border-noble-600 bg-noble-700/50 px-4 py-3 text-sm font-medium text-noble-100 transition hover:bg-noble-700 hover:text-white"
-        >
-          <span>Tema: {isDark ? 'Escuro 🌙' : 'Claro ☀️'}</span>
-          <span className="rounded-lg bg-noble-600 px-2 py-0.5 text-xs text-gold-300">Mudar</span>
-        </button>
 
         <div className="rounded-xl border border-noble-600 bg-noble-700 p-4">
           <p className="text-sm text-noble-200">Usuário conectado</p>
