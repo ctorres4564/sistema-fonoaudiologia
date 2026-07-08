@@ -7,6 +7,7 @@ import PrivateAreaPage from '../pages/PrivateAreaPage'
 import RegisterPage from '../pages/RegisterPage'
 import AgendaPage from '../pages/AgendaPage'
 import ReportPrintPage from '../pages/ReportPrintPage'
+import GuidePage from '../pages/GuidePage'
 import ProtectedRoute from './ProtectedRoute'
 import PublicRoute from './PublicRoute'
 
@@ -59,6 +60,7 @@ function AppRouter() {
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="pacientes" element={<PatientsPage />} />
         <Route path="agenda" element={<AgendaPage />} />
+        <Route path="guia" element={<GuidePage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

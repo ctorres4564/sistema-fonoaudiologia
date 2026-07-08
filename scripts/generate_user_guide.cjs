@@ -345,7 +345,18 @@ function generatePDF() {
   })
 
   doc.end()
-  console.log('PDF gerado com sucesso em: ' + pdfPath)
+  stream.on('finish', () => {
+    try {
+      const publicDocsDir = path.join(__dirname, '..', 'public', 'docs')
+      if (!fs.existsSync(publicDocsDir)) {
+        fs.mkdirSync(publicDocsDir, { recursive: true })
+      }
+      fs.copyFileSync(pdfPath, path.join(publicDocsDir, 'Guia_do_Usuario_FonoFlow.pdf'))
+      console.log('PDF gerado com sucesso em: ' + pdfPath + ' e copiado para public/docs!')
+    } catch (err) {
+      console.error('Erro ao copiar PDF para pasta public:', err)
+    }
+  })
 }
 
 generatePDF()
