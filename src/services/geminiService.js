@@ -13,9 +13,10 @@ export async function askGemini(prompt, systemInstruction) {
   const storageKey = `ia_usage_${userId}_${currentMonth}`
 
   const currentUsage = Number(localStorage.getItem(storageKey)) || 0
+  const userPlan = localStorage.getItem('user_plan') || 'demo'
 
   // Trava de cota mensal (limite de 10 chamadas no plano demonstrativo)
-  if (currentUsage >= 10) {
+  if (userPlan !== 'premium' && currentUsage >= 10) {
     throw new Error('Cota de IA excedida! Você utilizou as 10 requisições mensais gratuitas do plano demonstrativo. Assine o plano comercial para liberar uso ilimitado.')
   }
 
