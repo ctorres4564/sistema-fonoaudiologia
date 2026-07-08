@@ -22,14 +22,14 @@ export default async function handler(request, response) {
     return response.status(400).json({ error: 'Prompt is required' })
   }
 
-  // Chave de API do DeepSeek
-  const apiKey = process.env.DEEPSEEK_API_KEY
+  // Chave de API da OpenRouter
+  const apiKey = process.env.OPENROUTER_API_KEY
   if (!apiKey) {
-    return response.status(500).json({ error: 'DEEPSEEK_API_KEY is not configured on Vercel.' })
+    return response.status(500).json({ error: 'OPENROUTER_API_KEY is not configured on Vercel.' })
   }
 
   try {
-    const url = 'https://api.deepseek.com/chat/completions'
+    const url = 'https://openrouter.ai/api/v1/chat/completions'
 
     const messages = []
     if (systemInstruction) {
@@ -42,18 +42,19 @@ export default async function handler(request, response) {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
+        'HTTP-Referer': 'https://fonoflow.vercel.app',
+        'X-Title': 'FonoFlow',
       },
       body: JSON.stringify({
-        model: 'deepseek-chat',
+        model: 'deepseek/deepseek-chat',
         messages: messages,
         temperature: 0.7,
-        stream: false,
       }),
     })
 
     if (!apiResponse.ok) {
       const errorText = await apiResponse.text()
-      return response.status(apiResponse.status).json({ error: `DeepSeek API error: ${errorText}` })
+      return response.status(apiResponse.status).json({ error: `OpenRouter API error: ${errorText}` })
     }
 
     const data = await apiResponse.json()
@@ -61,7 +62,7 @@ export default async function handler(request, response) {
 
     return response.status(200).json({ text: resultText })
   } catch (error) {
-    console.error('Error calling DeepSeek API:', error)
+    console.error('Error calling OpenRouter API:', error)
     return response.status(500).json({ error: 'Internal Server Error' })
   }
 }

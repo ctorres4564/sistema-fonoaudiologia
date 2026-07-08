@@ -177,7 +177,7 @@ function EvolutionModal({ isOpen, onClose, patient }) {
       toast.success('Prontuário refinado com IA!')
     } catch (error) {
       console.error(error)
-      toast.error('Erro ao refinar com IA. Verifique se a DEEPSEEK_API_KEY está configurada no painel da Vercel.')
+      toast.error('Erro ao refinar com IA. Verifique se a OPENROUTER_API_KEY está configurada no painel da Vercel.')
     } finally {
       setRefiningText(false)
     }
@@ -214,7 +214,7 @@ function EvolutionModal({ isOpen, onClose, patient }) {
       toast.success('Exercícios gerados com IA!')
     } catch (error) {
       console.error(error)
-      toast.error('Erro ao gerar exercícios. Verifique se a DEEPSEEK_API_KEY está configurada.')
+      toast.error('Erro ao gerar exercícios. Verifique se a OPENROUTER_API_KEY está configurada.')
     } finally {
       setGeneratingExercises(false)
     }
