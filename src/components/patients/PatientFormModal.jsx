@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import toast from 'react-hot-toast'
 import InputField from '../common/InputField'
 import { calculateRemainingSessions } from '../../utils/patient'
 import { formatPhone, validatePatientForm } from '../../utils/validators'
@@ -19,6 +20,40 @@ function PatientFormModal({ isOpen, onClose, onSubmit, loading, patient }) {
   const [values, setValues] = useState(initialValues)
   const [errors, setErrors] = useState({})
 
+  // Web Speech API para Transcrição de Voz
+  const [isListening, setIsListening] = useState(false)
+  const [recognition, setRecognition] = useState(null)
+
+  // Configurar Speech Recognition
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+    if (SpeechRecognition) {
+      const rec = new SpeechRecognition()
+      rec.continuous = true
+      rec.interimResults = false
+      rec.lang = 'pt-BR'
+
+      rec.onresult = (event) => {
+        const text = event.results[event.results.length - 1][0].transcript
+        setValues((prev) => ({
+          ...prev,
+          notes: prev.notes ? `${prev.notes.trim()} ${text.trim()}.` : `${text.trim()}.`,
+        }))
+      }
+
+      rec.onerror = (event) => {
+        console.error('Erro no reconhecimento de voz:', event.error)
+        setIsListening(false)
+      }
+
+      rec.onend = () => {
+        setIsListening(false)
+      }
+
+      setRecognition(rec)
+    }
+  }, [])
+
   useEffect(() => {
     if (patient) {
       setValues({
@@ -38,12 +73,35 @@ function PatientFormModal({ isOpen, onClose, onSubmit, loading, patient }) {
 
     setValues(initialValues)
     setErrors({})
-  }, [patient, isOpen])
+
+    return () => {
+      if (recognition) recognition.stop()
+    }
+  }, [patient, isOpen, recognition])
 
   const remainingSessions = useMemo(
     () => calculateRemainingSessions(values.totalSessions, values.completedSessions),
     [values.totalSessions, values.completedSessions],
   )
+
+  const toggleSpeech = () => {
+    if (!recognition) {
+      toast.error('O reconhecimento de voz não é suportado pelo seu navegador.')
+      return
+    }
+
+    if (isListening) {
+      recognition.stop()
+    } else {
+      try {
+        recognition.start()
+        setIsListening(true)
+        toast.success('Pode falar, estou ouvindo...')
+      } catch (error) {
+        console.error(error)
+      }
+    }
+  }
 
   const handleChange = (event) => {
     const { name, value } = event.target
@@ -100,14 +158,31 @@ function PatientFormModal({ isOpen, onClose, onSubmit, loading, patient }) {
             <p className="text-2xl font-bold text-gold-600 dark:text-gold-400">{remainingSessions}</p>
           </div>
 
-          <div className="md:col-span-2">
-            <InputField
-              label="Observações"
-              type="textarea"
+          {/* Campo de Observações Customizado com Suporte à Voz */}
+          <div className="md:col-span-2 flex flex-col gap-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-noble-700 dark:text-noble-300">
+                Observações
+              </span>
+              <button
+                type="button"
+                onClick={toggleSpeech}
+                className={`text-[11px] px-2.5 py-1 rounded-lg border font-semibold flex items-center gap-1 transition ${
+                  isListening
+                    ? 'bg-red-500 border-red-500 text-white animate-pulse'
+                    : 'bg-white dark:bg-noble-800 border-noble-300 dark:border-noble-700 text-noble-700 dark:text-noble-300 hover:bg-noble-50 dark:hover:bg-noble-750'
+                }`}
+              >
+                <span>{isListening ? 'Ouvindo... 🛑' : 'Ditar 🎙️'}</span>
+              </button>
+            </div>
+            <textarea
               name="notes"
               value={values.notes}
               onChange={handleChange}
-              placeholder="Observações clínicas e de evolução"
+              placeholder="Observações clínicas e de evolução do paciente..."
+              rows={3}
+              className="w-full rounded-xl border border-noble-200 dark:border-noble-700 bg-white dark:bg-noble-800 px-4 py-2.5 text-sm text-noble-800 dark:text-noble-100 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-plum-300 dark:focus:ring-plum-800"
             />
           </div>
 
