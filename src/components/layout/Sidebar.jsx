@@ -5,6 +5,7 @@ import { useTheme } from '../../contexts/useTheme'
 const links = [
   { to: '/dashboard', label: 'Dashboard' },
   { to: '/pacientes', label: 'Pacientes' },
+  { to: '/agenda', label: 'Agenda' },
 ]
 
 function Sidebar({ open, onClose }) {

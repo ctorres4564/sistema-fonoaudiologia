@@ -13,5 +13,13 @@ service cloud.firestore {
           get(/databases/$(database)/documents/patients/$(patientId)).data.userId == request.auth.uid;
       }
     }
+
+    match /schedules/{scheduleId} {
+      allow read, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update: if request.auth != null &&
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.userId == request.auth.uid;
+    }
   }
 }

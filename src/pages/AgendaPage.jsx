@@ -1,0 +1,290 @@
+import { useMemo, useState } from 'react'
+import { useOutletContext } from 'react-router-dom'
+import toast from 'react-hot-toast'
+import ScheduleModal from '../components/patients/ScheduleModal'
+import { removeSchedule } from '../services/scheduleService'
+import { useAuth } from '../contexts/useAuth'
+
+// Nomes dos meses e dias da semana
+const MONTHS = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+]
+const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+
+function AgendaPage() {
+  const { user } = useAuth()
+  const { patients = [], schedules = [], loadingSchedules } = useOutletContext()
+
+  const [currentDate, setCurrentDate] = useState(new Date())
+  const [selectedDateStr, setSelectedDateStr] = useState(new Date().toISOString().split('T')[0])
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedSchedule, setSelectedSchedule] = useState(null)
+
+  const currentYear = currentDate.getFullYear()
+  const currentMonth = currentDate.getMonth()
+
+  // Geração dos dias do calendário para o mês ativo
+  const daysInMonth = useMemo(() => {
+    const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay()
+    const totalDays = new Date(currentYear, currentMonth + 1, 0).getDate()
+
+    const days = []
+
+    // Preencher dias vazios do mês anterior
+    for (let i = 0; i < firstDayIndex; i++) {
+      days.push(null)
+    }
+
+    // Preencher dias do mês atual
+    for (let day = 1; day <= totalDays; day++) {
+      // Formato YYYY-MM-DD local
+      const monthStr = String(currentMonth + 1).padStart(2, '0')
+      const dayStr = String(day).padStart(2, '0')
+      const dateStr = `${currentYear}-${monthStr}-${dayStr}`
+      days.push({ day, dateStr })
+    }
+
+    return days
+  }, [currentYear, currentMonth])
+
+  // Agrupar os schedules por dia para marcar no calendário
+  const schedulesByDate = useMemo(() => {
+    const map = {}
+    schedules.forEach((sch) => {
+      if (!map[sch.date]) {
+        map[sch.date] = []
+      }
+      map[sch.date].push(sch)
+    })
+    return map
+  }, [schedules])
+
+  // Filtrar apenas os compromissos do dia selecionado
+  const selectedDaySchedules = useMemo(() => {
+    return schedulesByDate[selectedDateStr] || []
+  }, [schedulesByDate, selectedDateStr])
+
+  // Navegar entre meses
+  const prevMonth = () => {
+    setCurrentDate(new Date(currentYear, currentMonth - 1, 1))
+  }
+  const nextMonth = () => {
+    setCurrentDate(new Date(currentYear, currentMonth + 1, 1))
+  }
+  const goToToday = () => {
+    const today = new Date()
+    setCurrentDate(today)
+    setSelectedDateStr(today.toISOString().split('T')[0])
+  }
+
+  // Modais
+  const openCreateModal = () => {
+    setSelectedSchedule(null)
+    setIsModalOpen(true)
+  }
+  const openEditModal = (sch) => {
+    setSelectedSchedule(sch)
+    setIsModalOpen(true)
+  }
+  const handleCloseModal = () => {
+    setIsModalOpen(false)
+    setSelectedSchedule(null)
+  }
+
+  const handleDeleteSchedule = async (sch) => {
+    const confirmed = window.confirm(`Deseja realmente desmarcar a sessão de ${sch.patientName}?`)
+    if (!confirmed) return
+
+    try {
+      await removeSchedule(sch.id)
+      toast.success('Agendamento desmarcado com sucesso.')
+    } catch (error) {
+      toast.error('Erro ao desmarcar consulta.')
+      console.error(error)
+    }
+  }
+
+  // Formatador da data selecionada por extenso (ex: 8 de Julho de 2026)
+  const formattedSelectedDate = useMemo(() => {
+    const [y, m, d] = selectedDateStr.split('-')
+    const dateObj = new Date(Number(y), Number(m) - 1, Number(d))
+    return dateObj.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })
+  }, [selectedDateStr])
+
+  return (
+    <div className="space-y-6">
+      {/* Cabeçalho */}
+      <div className="flex flex-col gap-4 rounded-2xl border border-noble-200 dark:border-noble-800 bg-white dark:bg-noble-900 p-5 shadow-card md:flex-row md:items-center md:justify-between transition-colors duration-200">
+        <div>
+          <h2 className="text-2xl font-bold text-noble-800 dark:text-noble-100">Agenda</h2>
+          <p className="text-sm text-noble-500 dark:text-noble-400">Controle integrado de datas e horários de atendimentos.</p>
+        </div>
+        <button
+          type="button"
+          onClick={openCreateModal}
+          className="rounded-xl bg-plum-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-plum-700"
+        >
+          + Novo agendamento
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-12">
+        {/* Lado Esquerdo: Calendário (8 Colunas) */}
+        <div className="rounded-2xl border border-noble-200 dark:border-noble-800 bg-white dark:bg-noble-900 p-5 shadow-card md:col-span-7 transition-colors duration-200">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-lg font-bold text-noble-800 dark:text-noble-100">
+              {MONTHS[currentMonth]} de {currentYear}
+            </h3>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={goToToday}
+                className="rounded-lg border border-noble-300 dark:border-noble-700 px-3 py-1.5 text-xs font-semibold text-noble-700 dark:text-noble-300 hover:bg-noble-50 dark:hover:bg-noble-800 transition"
+              >
+                Hoje
+              </button>
+              <button
+                type="button"
+                onClick={prevMonth}
+                className="rounded-lg border border-noble-300 dark:border-noble-700 px-3 py-1.5 text-xs text-noble-700 dark:text-noble-300 hover:bg-noble-50 dark:hover:bg-noble-800 transition"
+              >
+                &lt; Anterior
+              </button>
+              <button
+                type="button"
+                onClick={nextMonth}
+                className="rounded-lg border border-noble-300 dark:border-noble-700 px-3 py-1.5 text-xs text-noble-700 dark:text-noble-300 hover:bg-noble-50 dark:hover:bg-noble-800 transition"
+              >
+                Próximo &gt;
+              </button>
+            </div>
+          </div>
+
+          {/* Grid do Calendário */}
+          <div className="grid grid-cols-7 gap-1 text-center text-xs font-semibold text-noble-500 dark:text-noble-400">
+            {WEEKDAYS.map((day) => (
+              <div key={day} className="py-2">{day}</div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-7 gap-1 mt-1">
+            {daysInMonth.map((dayInfo, idx) => {
+              if (!dayInfo) {
+                return <div key={`empty-${idx}`} className="h-14 bg-noble-50/50 dark:bg-noble-800/10 rounded-lg" />
+              }
+
+              const { day, dateStr } = dayInfo
+              const isSelected = dateStr === selectedDateStr
+              const hasSchedules = !!schedulesByDate[dateStr]
+              const isToday = dateStr === new Date().toISOString().split('T')[0]
+
+              return (
+                <button
+                  key={dateStr}
+                  type="button"
+                  onClick={() => setSelectedDateStr(dateStr)}
+                  className={`h-14 relative flex flex-col items-center justify-between p-1.5 rounded-lg border transition ${
+                    isSelected
+                      ? 'border-plum-500 bg-plum-50 dark:bg-plum-950/20 text-plum-700 dark:text-plum-300 font-bold'
+                      : 'border-noble-100 dark:border-noble-800/60 bg-white dark:bg-noble-900 text-noble-800 dark:text-noble-200 hover:border-noble-300 dark:hover:border-noble-750'
+                  }`}
+                >
+                  <span className={`text-xs rounded-full px-1.5 py-0.5 ${isToday ? 'bg-gold-400 text-noble-950 font-bold' : ''}`}>
+                    {day}
+                  </span>
+                  
+                  {/* Ponto indicador de compromisso */}
+                  {hasSchedules && (
+                    <span className="h-2 w-2 rounded-full bg-plum-600 dark:bg-plum-500 mb-1 animate-pulse" />
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Lado Direito: Compromissos do Dia (5 Colunas) */}
+        <div className="rounded-2xl border border-noble-200 dark:border-noble-800 bg-white dark:bg-noble-900 p-5 shadow-card md:col-span-5 flex flex-col transition-colors duration-200">
+          <div className="border-b border-noble-200 dark:border-noble-800 pb-3 mb-4">
+            <h3 className="text-base font-bold text-noble-800 dark:text-noble-100">Consultas do Dia</h3>
+            <p className="text-xs text-noble-500 dark:text-noble-400 mt-1 font-semibold">{formattedSelectedDate}</p>
+          </div>
+
+          {loadingSchedules ? (
+            <div className="flex flex-1 items-center justify-center py-20">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-plum-200 border-t-plum-600" />
+            </div>
+          ) : selectedDaySchedules.length === 0 ? (
+            <div className="flex flex-1 flex-col items-center justify-center py-14 text-center">
+              <p className="text-sm font-medium text-noble-500 dark:text-noble-400">Nenhuma consulta agendada para hoje.</p>
+              <p className="text-xs text-noble-400 dark:text-noble-500 mt-1">Utilize o botão superior para marcar.</p>
+            </div>
+          ) : (
+            <div className="space-y-4 overflow-y-auto max-h-[350px] pr-1">
+              {selectedDaySchedules.map((sch) => {
+                const badgeColor = {
+                  Terapia: 'bg-plum-100 dark:bg-plum-950/40 text-plum-700 dark:text-plum-300',
+                  Avaliação: 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300',
+                  Retorno: 'bg-gold-100 dark:bg-gold-950/40 text-gold-700 dark:text-gold-300',
+                }[sch.sessionType] || 'bg-noble-100 dark:bg-noble-800 text-noble-700 dark:text-noble-300'
+
+                return (
+                  <div
+                    key={sch.id}
+                    className="group relative rounded-xl border border-noble-200 dark:border-noble-800 bg-white dark:bg-noble-950 p-4 shadow-sm hover:border-noble-300 dark:hover:border-noble-700 transition"
+                  >
+                    {/* Botões de Ação na Linha */}
+                    <div className="absolute right-3 top-3 flex gap-2 opacity-0 group-hover:opacity-100 transition">
+                      <button
+                        type="button"
+                        onClick={() => openEditModal(sch)}
+                        className="text-xs text-plum-600 dark:text-plum-400 hover:underline"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteSchedule(sch)}
+                        className="text-xs text-red-500 hover:underline"
+                      >
+                        Desmarcar
+                      </button>
+                    </div>
+
+                    <p className="font-semibold text-noble-800 dark:text-noble-100">{sch.patientName}</p>
+                    
+                    <div className="flex flex-wrap gap-2 items-center mt-2">
+                      <span className="text-xs font-semibold text-noble-600 dark:text-noble-300 bg-noble-100 dark:bg-noble-800 px-2 py-0.5 rounded">
+                        🕒 {sch.startTime} - {sch.endTime}
+                      </span>
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded ${badgeColor}`}>
+                        {sch.sessionType}
+                      </span>
+                    </div>
+
+                    {sch.notes && (
+                      <p className="mt-2 text-xs text-noble-500 dark:text-noble-400 bg-noble-50 dark:bg-noble-900/40 p-2 rounded italic">
+                        {sch.notes}
+                      </p>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <ScheduleModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        patients={patients}
+        schedule={selectedSchedule}
+        userId={user?.uid}
+      />
+    </div>
+  )
+}
+
+export default AgendaPage
