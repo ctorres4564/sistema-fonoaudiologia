@@ -2,8 +2,10 @@ import { useMemo, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import EmptyState from '../components/common/EmptyState'
+import SkeletonTable from '../components/common/SkeletonTable'
 import PatientFormModal from '../components/patients/PatientFormModal'
 import PatientTable from '../components/patients/PatientTable'
+import EvolutionModal from '../components/patients/EvolutionModal'
 import { useAuth } from '../contexts/useAuth'
 import { createPatient, removePatient, updatePatient } from '../services/patientService'
 import { normalizePatientPayload } from '../utils/patient'
@@ -11,11 +13,15 @@ import { onlyDigits } from '../utils/validators'
 
 function PatientsPage() {
   const { user } = useAuth()
-  const { patients } = useOutletContext()
+  const { patients = [], loadingPatients } = useOutletContext()
   const [search, setSearch] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedPatient, setSelectedPatient] = useState(null)
   const [loadingForm, setLoadingForm] = useState(false)
+
+  // Estados para o modal de evoluções
+  const [isEvolutionOpen, setIsEvolutionOpen] = useState(false)
+  const [evolutionPatient, setEvolutionPatient] = useState(null)
 
   const filteredPatients = useMemo(() => {
     const term = search.toLowerCase().trim()
@@ -41,6 +47,16 @@ function PatientsPage() {
   const closeModal = () => {
     setIsModalOpen(false)
     setSelectedPatient(null)
+  }
+
+  const openEvolutionModal = (patient) => {
+    setEvolutionPatient(patient)
+    setIsEvolutionOpen(true)
+  }
+
+  const closeEvolutionModal = () => {
+    setIsEvolutionOpen(false)
+    setEvolutionPatient(null)
   }
 
   const handleSavePatient = async (values) => {
@@ -106,8 +122,15 @@ function PatientsPage() {
         />
       </div>
 
-      {filteredPatients.length > 0 ? (
-        <PatientTable patients={filteredPatients} onEdit={openEditModal} onDelete={handleDeletePatient} />
+      {loadingPatients ? (
+        <SkeletonTable />
+      ) : filteredPatients.length > 0 ? (
+        <PatientTable
+          patients={filteredPatients}
+          onEdit={openEditModal}
+          onDelete={handleDeletePatient}
+          onEvolution={openEvolutionModal}
+        />
       ) : (
         <EmptyState
           title={patients.length === 0 ? 'Nenhum paciente cadastrado' : 'Nenhum resultado encontrado'}
@@ -125,6 +148,12 @@ function PatientsPage() {
         onSubmit={handleSavePatient}
         loading={loadingForm}
         patient={selectedPatient}
+      />
+
+      <EvolutionModal
+        isOpen={isEvolutionOpen}
+        onClose={closeEvolutionModal}
+        patient={evolutionPatient}
       />
     </div>
   )

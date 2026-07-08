@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import AppLayout from '../components/layout/AppLayout'
-import LoadingSpinner from '../components/common/LoadingSpinner'
 import { useAuth } from '../contexts/useAuth'
 import { subscribePatients } from '../services/patientService'
 
@@ -30,13 +29,9 @@ function PrivateAreaPage() {
     return () => unsubscribe()
   }, [user?.uid])
 
-  if (loadingPatients) {
-    return <LoadingSpinner text="Carregando dados dos pacientes..." />
-  }
-
   return (
     <AppLayout>
-      <Outlet context={{ patients }} />
+      <Outlet context={{ patients, loadingPatients }} />
     </AppLayout>
   )
 }

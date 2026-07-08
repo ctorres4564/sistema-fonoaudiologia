@@ -1,6 +1,6 @@
 import { calculateRemainingSessions, getPatientStatus } from '../../utils/patient'
 
-function PatientTable({ patients, onEdit, onDelete }) {
+function PatientTable({ patients, onEdit, onDelete, onEvolution }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-noble-200 bg-white shadow-card">
       <div className="overflow-x-auto">
@@ -44,6 +44,13 @@ function PatientTable({ patients, onEdit, onDelete }) {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onEvolution(patient)}
+                        className="rounded-lg bg-plum-600 px-3 py-1.5 font-medium text-white hover:bg-plum-700"
+                      >
+                        Evolução
+                      </button>
                       <button
                         type="button"
                         onClick={() => onEdit(patient)}
