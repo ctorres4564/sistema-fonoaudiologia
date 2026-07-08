@@ -13,7 +13,7 @@ export async function askGemini(prompt, systemInstruction) {
   const storageKey = `ia_usage_${userId}_${currentMonth}`
 
   const currentUsage = Number(localStorage.getItem(storageKey)) || 0
-  const userPlan = localStorage.getItem('user_plan') || 'demo'
+  const userPlan = (localStorage.getItem('user_plan') || 'demo').toLowerCase()
 
   // Trava de cota mensal (limite de 10 chamadas no plano demonstrativo)
   if (userPlan !== 'premium' && currentUsage >= 10) {
