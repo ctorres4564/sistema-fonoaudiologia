@@ -37,11 +37,12 @@ Na aba **Pacientes**, você gerencia as pessoas sob seus cuidados:
 
 ## 📅 3. Agenda & Lembretes no WhatsApp
 
-A aba **Agenda** organiza a rotina de visitas domiciliares de forma cronológica:
-1.  Clique em `+ Novo Agendamento` para marcar o paciente, data e hora da sessão.
-2.  No card do agendamento, clique no botão verde **Lembrete 💬**.
-3.  O sistema abrirá automaticamente o WhatsApp Web ou o aplicativo do WhatsApp do seu celular com a mensagem adaptada para home care:
+A aba **Agenda** organiza a rotina de visitas domiciliares de forma cronológica e centralizada:
+*   **Calendário Mensal**: Visualize quais dias possuem consultas através do ponto roxo indicador e clique no dia para ver os compromissos no painel lateral.
+*   **Agendar**: Clique em `+ Novo Agendamento` para marcar o paciente, data e hora da sessão.
+*   **Lembrete por WhatsApp 💬**: No card da consulta ou na lista geral, clique em **Lembrete 💬** para abrir o WhatsApp com a mensagem formatada para home care:
     > *"Olá! Confirmamos o atendimento domiciliar de [Nome do Paciente] no dia [Data] às [Hora]. Estarei aí no horário combinado!"*
+*   **Lista Geral de Agendamentos**: Na parte inferior da tela, consulte todos os compromissos cadastrados de forma cronológica. Você pode buscar pacientes por nome nesta lista e usar os botões de **Lembrete 💬**, **Editar** ou **Desmarcar** direto na linha correspondente, sem precisar procurar dia a dia no calendário.
 
 ---
 

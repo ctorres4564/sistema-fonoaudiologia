@@ -85,17 +85,20 @@ function GuidePage() {
       content: (
         <div className="space-y-4">
           <p className="text-sm text-noble-700 dark:text-noble-300 leading-relaxed">
-            A aba de <strong>Agenda</strong> ajuda a organizar as visitas domiciliares por ordem cronológica de data e horário:
+            A aba de <strong>Agenda</strong> ajuda a organizar as visitas domiciliares de forma cronológica e centralizada:
           </p>
           <ul className="space-y-3 text-xs text-noble-700 dark:text-noble-300">
             <li>
-              <strong>Agendar:</strong> Clique em <code>+ Novo Agendamento</code>, preencha o paciente correspondente, a data da visita, a hora de início e o tipo de atendimento.
+              <strong>Calendário Mensal:</strong> Visualize quais dias possuem consultas marcadas (indicadas por um ponto roxo) e clique em qualquer data para listar seus compromissos no painel direito.
             </li>
             <li>
-              <strong>Lembrete por WhatsApp 💬:</strong> Clique no botão verde <code>Lembrete 💬</code> em qualquer agendamento. O sistema redirecionará você para o WhatsApp Web ou para o app do WhatsApp no celular contendo uma mensagem pronta:
-              <div className="mt-2 rounded-lg bg-neutral-100 dark:bg-noble-800 p-3 italic text-neutral-600 dark:text-neutral-350 border border-neutral-200 dark:border-noble-700">
-                "Olá! Confirmamos o atendimento domiciliar de [Nome do Paciente] no dia [Data] às [Hora]. Estarei aí no horário combinado!"
-              </div>
+              <strong>Agendar:</strong> Clique em <code>+ Novo Agendamento</code> para agendar o paciente, data, horário e categoria da sessão.
+            </li>
+            <li>
+              <strong>Lembrete por WhatsApp 💬:</strong> Clique em <code>Lembrete 💬</code> em qualquer agendamento para abrir o WhatsApp Web ou o app móvel com o texto de confirmação de home care estruturado automaticamente.
+            </li>
+            <li>
+              <strong>Lista Geral de Agendamentos (Histórico):</strong> Na parte inferior da tela da Agenda, consulte a tabela cronológica geral. Pesquise seus pacientes pelo nome ou tipo e use as ações de <code>Lembrete 💬</code>, <code>Editar</code> ou <code>Desmarcar</code> diretamente nas linhas do histórico.
             </li>
           </ul>
         </div>
