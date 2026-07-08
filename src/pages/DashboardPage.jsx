@@ -128,14 +128,14 @@ function DashboardPage() {
 
       {/* Onboarding Banner Interativo do SaaS */}
       {showOnboarding && (
-        <div className="rounded-2xl border border-plum-200 dark:border-plum-800/80 bg-plum-50/50 dark:bg-plum-950/20 p-5 shadow-sm transition-colors duration-200 relative">
+        <div className="rounded-2xl border border-plum-200 dark:border-plum-900/50 bg-plum-50/40 dark:bg-noble-850/30 p-5 shadow-sm transition-colors duration-200 relative">
           <button
             type="button"
             onClick={() => {
               localStorage.setItem('onboarding_completed', 'true')
               setShowOnboarding(false)
             }}
-            className="absolute top-4 right-4 text-noble-400 hover:text-noble-600 dark:hover:text-noble-200 text-xs font-bold transition-colors"
+            className="absolute top-4 right-4 text-noble-400 hover:text-noble-650 dark:text-noble-500 dark:hover:text-noble-300 text-xs font-bold transition-colors"
           >
             Dispensar ✕
           </button>
@@ -143,12 +143,12 @@ function DashboardPage() {
           <h3 className="text-sm font-bold text-plum-900 dark:text-plum-300 flex items-center gap-2">
             <span>✨</span> Seja bem-vindo ao FonoFlow!
           </h3>
-          <p className="text-xs text-noble-650 dark:text-noble-300 mt-1.5 leading-relaxed max-w-2xl">
+          <p className="text-xs text-noble-600 dark:text-noble-300 mt-1.5 leading-relaxed max-w-2xl">
             Preparamos um guia rápido para ajudar você a dar os primeiros passos e configurar seu consultório domiciliar em menos de 2 minutos. Siga as etapas sugeridas:
           </p>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 mt-4">
-            <div className="rounded-xl bg-white dark:bg-noble-850 p-4 border border-noble-100 dark:border-noble-800/60 shadow-sm flex flex-col justify-between">
+            <div className="rounded-xl bg-white dark:bg-noble-800 p-4 border border-noble-100 dark:border-noble-700/60 shadow-sm flex flex-col justify-between">
               <div>
                 <span className="text-[10px] font-bold text-plum-600 dark:text-plum-400">Etapa 1 👥</span>
                 <h4 className="text-xs font-bold text-noble-800 dark:text-noble-100 mt-1">Cadastrar Paciente</h4>
@@ -164,7 +164,7 @@ function DashboardPage() {
               </a>
             </div>
 
-            <div className="rounded-xl bg-white dark:bg-noble-850 p-4 border border-noble-100 dark:border-noble-800/60 shadow-sm flex flex-col justify-between">
+            <div className="rounded-xl bg-white dark:bg-noble-800 p-4 border border-noble-100 dark:border-noble-700/60 shadow-sm flex flex-col justify-between">
               <div>
                 <span className="text-[10px] font-bold text-plum-600 dark:text-plum-400">Etapa 2 📅</span>
                 <h4 className="text-xs font-bold text-noble-800 dark:text-noble-100 mt-1">Agendar Visita</h4>
@@ -180,7 +180,7 @@ function DashboardPage() {
               </a>
             </div>
 
-            <div className="rounded-xl bg-white dark:bg-noble-850 p-4 border border-noble-100 dark:border-noble-800/60 shadow-sm flex flex-col justify-between">
+            <div className="rounded-xl bg-white dark:bg-noble-800 p-4 border border-noble-100 dark:border-noble-700/60 shadow-sm flex flex-col justify-between">
               <div>
                 <span className="text-[10px] font-bold text-plum-600 dark:text-plum-400">Etapa 3 📖</span>
                 <h4 className="text-xs font-bold text-noble-800 dark:text-noble-100 mt-1">Ver o Guia de Uso</h4>
