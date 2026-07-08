@@ -6,10 +6,10 @@ function AppLayout({ children }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   return (
-    <div className="flex min-h-screen bg-noble-50 dark:bg-noble-950 transition-colors duration-200">
+    <div className="flex min-h-screen bg-noble-50 dark:bg-noble-900 transition-colors duration-200">
       <Sidebar open={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
-      <main className="min-w-0 flex-1">
+      <main className="min-w-0 flex-1 bg-noble-50 dark:bg-noble-900 transition-colors duration-200">
         <header className="sticky top-0 z-20 flex items-center justify-between border-b border-noble-200 dark:border-noble-800 bg-white/90 dark:bg-noble-900/90 px-4 py-3 backdrop-blur md:px-8 transition-colors duration-200">
           <button
             type="button"
