@@ -6,6 +6,7 @@ import PatientsPage from '../pages/PatientsPage'
 import PrivateAreaPage from '../pages/PrivateAreaPage'
 import RegisterPage from '../pages/RegisterPage'
 import AgendaPage from '../pages/AgendaPage'
+import ReportPrintPage from '../pages/ReportPrintPage'
 import ProtectedRoute from './ProtectedRoute'
 import PublicRoute from './PublicRoute'
 
@@ -34,6 +35,15 @@ function AppRouter() {
           <PublicRoute>
             <ForgotPasswordPage />
           </PublicRoute>
+        }
+      />
+
+      <Route
+        path="/imprimir/paciente/:id"
+        element={
+          <ProtectedRoute>
+            <ReportPrintPage />
+          </ProtectedRoute>
         }
       />
 

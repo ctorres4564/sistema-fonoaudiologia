@@ -191,13 +191,22 @@ function EvolutionModal({ isOpen, onClose, patient }) {
               Paciente: <strong className="text-noble-700 dark:text-noble-300">{patient.name}</strong>
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg border border-noble-300 dark:border-noble-700 px-3 py-1.5 text-sm font-semibold text-noble-600 dark:text-noble-400 hover:bg-noble-50 dark:hover:bg-noble-800 transition"
-          >
-            Fechar
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => window.open(`/imprimir/paciente/${patient.id}`, '_blank')}
+              className="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-green-700 transition"
+            >
+              Imprimir Prontuário 🖨️
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg border border-noble-300 dark:border-noble-700 px-3 py-1.5 text-sm font-semibold text-noble-600 dark:text-noble-400 hover:bg-noble-50 dark:hover:bg-noble-800 transition"
+            >
+              Fechar
+            </button>
+          </div>
         </div>
 
         {/* Abas */}
