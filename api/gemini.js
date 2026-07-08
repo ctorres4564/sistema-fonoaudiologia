@@ -22,45 +22,46 @@ export default async function handler(request, response) {
     return response.status(400).json({ error: 'Prompt is required' })
   }
 
-  const apiKey = process.env.GEMINI_API_KEY
+  // Chave de API do DeepSeek
+  const apiKey = process.env.DEEPSEEK_API_KEY
   if (!apiKey) {
-    return response.status(500).json({ error: 'GEMINI_API_KEY is not configured on Vercel.' })
+    return response.status(500).json({ error: 'DEEPSEEK_API_KEY is not configured on Vercel.' })
   }
 
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`
+    const url = 'https://api.deepseek.com/chat/completions'
 
-    const bodyPayload = {
-      contents: [{
-        parts: [{ text: prompt }]
-      }]
-    }
-
+    const messages = []
     if (systemInstruction) {
-      bodyPayload.systemInstruction = {
-        parts: [{ text: systemInstruction }]
-      }
+      messages.push({ role: 'system', content: systemInstruction })
     }
+    messages.push({ role: 'user', content: prompt })
 
     const apiResponse = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
       },
-      body: JSON.stringify(bodyPayload),
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: messages,
+        temperature: 0.7,
+        stream: false,
+      }),
     })
 
     if (!apiResponse.ok) {
       const errorText = await apiResponse.text()
-      return response.status(apiResponse.status).json({ error: `Gemini API error: ${errorText}` })
+      return response.status(apiResponse.status).json({ error: `DeepSeek API error: ${errorText}` })
     }
 
     const data = await apiResponse.json()
-    const resultText = data?.candidates?.[0]?.content?.parts?.[0]?.text || ''
+    const resultText = data?.choices?.[0]?.message?.content || ''
 
     return response.status(200).json({ text: resultText })
   } catch (error) {
-    console.error('Error calling Gemini API:', error)
+    console.error('Error calling DeepSeek API:', error)
     return response.status(500).json({ error: 'Internal Server Error' })
   }
 }
