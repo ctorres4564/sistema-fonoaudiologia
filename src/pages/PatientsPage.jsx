@@ -68,8 +68,8 @@ function PatientsPage() {
         await updatePatient(selectedPatient.id, payload)
         toast.success('Paciente atualizado com sucesso!')
       } else {
-        if (userProfile?.plan?.toLowerCase() !== 'premium' && patients.length >= 5) {
-          toast.error('Limite do plano de demonstração atingido! Você pode cadastrar até 5 pacientes. Entre em contato para ativar o plano comercial ilimitado.', { duration: 6000 })
+        if (userProfile?.plan?.toLowerCase() !== 'premium' && patients.length >= 20) {
+          toast.error('Limite do plano de demonstração atingido! Você pode cadastrar até 20 pacientes. Entre em contato para ativar o plano comercial ilimitado.', { duration: 6000 })
           setLoadingForm(false)
           return
         }
