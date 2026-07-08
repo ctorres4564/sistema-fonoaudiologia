@@ -128,22 +128,22 @@ function DashboardPage() {
 
       {/* Onboarding Banner Interativo do SaaS */}
       {showOnboarding && (
-        <div className="rounded-2xl border border-plum-200 dark:border-plum-900/50 bg-plum-50/40 dark:bg-noble-850/30 p-5 shadow-sm transition-colors duration-200 relative">
+        <div className="rounded-2xl border border-plum-200 dark:border-noble-800/60 bg-plum-50/40 dark:bg-noble-850/20 p-5 shadow-sm transition-colors duration-200 relative">
           <button
             type="button"
             onClick={() => {
               localStorage.setItem('onboarding_completed', 'true')
               setShowOnboarding(false)
             }}
-            className="absolute top-4 right-4 text-noble-400 hover:text-noble-650 dark:text-noble-500 dark:hover:text-noble-300 text-xs font-bold transition-colors"
+            className="absolute top-4 right-4 text-noble-400 hover:text-noble-650 dark:text-noble-400 dark:hover:text-white text-xs font-bold transition-colors"
           >
             Dispensar ✕
           </button>
           
-          <h3 className="text-sm font-bold text-plum-900 dark:text-plum-300 flex items-center gap-2">
+          <h3 className="text-sm font-bold text-plum-900 dark:text-white flex items-center gap-2">
             <span>✨</span> Seja bem-vindo ao FonoFlow!
           </h3>
-          <p className="text-xs text-noble-600 dark:text-noble-300 mt-1.5 leading-relaxed max-w-2xl">
+          <p className="text-xs text-noble-700 dark:text-noble-100 mt-1.5 leading-relaxed max-w-2xl">
             Preparamos um guia rápido para ajudar você a dar os primeiros passos e configurar seu consultório domiciliar em menos de 2 minutos. Siga as etapas sugeridas:
           </p>
 
