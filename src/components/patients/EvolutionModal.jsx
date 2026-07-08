@@ -3,6 +3,7 @@ import toast from 'react-hot-toast'
 import InputField from '../common/InputField'
 import { createEvolution, removeEvolution, subscribeEvolutions, updatePatient } from '../../services/patientService'
 import { getAnamnesis, saveAnamnesis } from '../../services/anamnesisService'
+import { askGemini } from '../../services/geminiService'
 
 const initialValues = {
   date: new Date().toISOString().split('T')[0],
@@ -27,11 +28,52 @@ function EvolutionModal({ isOpen, onClose, patient }) {
   const [loadingList, setLoadingList] = useState(true)
   const [formValues, setFormValues] = useState(initialValues)
   const [loadingSubmit, setLoadingSubmit] = useState(false)
+  const [refiningText, setRefiningText] = useState(false)
 
   // Estados de Anamnese
   const [anamnesisValues, setAnamnesisValues] = useState(initialAnamnesis)
   const [loadingAnamnesis, setLoadingAnamnesis] = useState(false)
   const [savingAnamnesis, setSavingAnamnesis] = useState(false)
+
+  // Web Speech API para Transcrição de Voz
+  const [isListening, setIsListening] = useState(false)
+  const [recognition, setRecognition] = useState(null)
+
+  // Estados dos recursos extras de IA (Exercícios e Progresso)
+  const [generatingExercises, setGeneratingExercises] = useState(false)
+  const [suggestedExercises, setSuggestedExercises] = useState('')
+  const [analyzingProgress, setAnalyzingProgress] = useState(false)
+  const [aiProgressAnalysis, setAiProgressAnalysis] = useState('')
+
+  // Configurar Speech Recognition
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+    if (SpeechRecognition) {
+      const rec = new SpeechRecognition()
+      rec.continuous = true
+      rec.interimResults = false
+      rec.lang = 'pt-BR'
+
+      rec.onresult = (event) => {
+        const text = event.results[event.results.length - 1][0].transcript
+        setFormValues((prev) => ({
+          ...prev,
+          notes: prev.notes ? `${prev.notes.trim()} ${text.trim()}.` : `${text.trim()}.`,
+        }))
+      }
+
+      rec.onerror = (event) => {
+        console.error('Erro no reconhecimento de voz:', event.error)
+        setIsListening(false)
+      }
+
+      rec.onend = () => {
+        setIsListening(false)
+      }
+
+      setRecognition(rec)
+    }
+  }, [])
 
   // Subescrever nas evoluções em tempo real quando o modal abrir para um paciente
   useEffect(() => {
@@ -51,19 +93,24 @@ function EvolutionModal({ isOpen, onClose, patient }) {
       }
     )
 
-    // Resetar formulário
+    // Resetar formulários e análises antigas
     setFormValues({
       date: new Date().toISOString().split('T')[0],
       duration: 50,
       notes: '',
       incrementSession: true,
     })
+    setSuggestedExercises('')
+    setAiProgressAnalysis('')
 
     // Resetar para aba inicial ao abrir para novo paciente
     setActiveTab('evolutions')
 
-    return () => unsubscribe()
-  }, [isOpen, patient])
+    return () => {
+      unsubscribe()
+      if (recognition) recognition.stop()
+    }
+  }, [isOpen, patient, recognition])
 
   // Buscar anamnese quando a aba mudar para 'anamnesis'
   useEffect(() => {
@@ -94,6 +141,112 @@ function EvolutionModal({ isOpen, onClose, patient }) {
 
     fetchAnamnesis()
   }, [isOpen, patient, activeTab])
+
+  const toggleSpeech = () => {
+    if (!recognition) {
+      toast.error('O reconhecimento de voz não é suportado pelo seu navegador.')
+      return
+    }
+
+    if (isListening) {
+      recognition.stop()
+    } else {
+      try {
+        recognition.start()
+        setIsListening(true)
+        toast.success('Pode falar, estou ouvindo...')
+      } catch (error) {
+        console.error(error)
+      }
+    }
+  }
+
+  const handleRefineNotes = async () => {
+    if (!formValues.notes.trim()) {
+      toast.error('Escreva ou dite algo primeiro para refinar com a IA.')
+      return
+    }
+
+    try {
+      setRefiningText(true)
+      const systemInstruction = 'Você é um fonoaudiólogo especialista em atendimento domiciliar. Seu papel é receber anotações clínicas informais, rápidas ou desestruturadas e formatá-las em um prontuário técnico formal, claro, de alto padrão clínico fonoaudiológico e em português. Mantenha os fatos relatados exatamente iguais, mas use linguagem profissional técnica fonoaudiológica. Retorne APENAS o prontuário refinado em parágrafo limpo, sem nenhuma introdução ou observação extra.'
+      const prompt = `Formate a seguinte anotação: "${formValues.notes}"`
+      
+      const refined = await askGemini(prompt, systemInstruction)
+      setFormValues((prev) => ({ ...prev, notes: refined.trim() }))
+      toast.success('Prontuário refinado com IA!')
+    } catch (error) {
+      console.error(error)
+      toast.error('Erro ao refinar com IA. Verifique se a GEMINI_API_KEY está configurada no painel da Vercel.')
+    } finally {
+      setRefiningText(false)
+    }
+  }
+
+  const handleGenerateExercises = async () => {
+    if (!anamnesisValues.complaint.trim()) {
+      toast.error('Por favor, preencha a Queixa Principal antes de gerar exercícios.')
+      return
+    }
+
+    try {
+      setGeneratingExercises(true)
+      
+      // Calcular idade aproximada do paciente
+      let ageStr = 'Idade não informada'
+      if (patient.birthDate) {
+        const [y, m, d] = patient.birthDate.split('-')
+        const birth = new Date(Number(y), Number(m) - 1, Number(d))
+        const today = new Date()
+        let age = today.getFullYear() - birth.getFullYear()
+        const monthDiff = today.getMonth() - birth.getMonth()
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+          age--
+        }
+        ageStr = `${age} anos`
+      }
+
+      const systemInstruction = 'Você é um fonoaudiólogo especialista em atendimento domiciliar infantil e adulto. Seu papel é propor sugestões práticas, criativas e divertidas de atividades e jogos fonoaudiológicos domiciliares que os pais ou o próprio paciente possam realizar para tratar uma queixa específica de fala ou linguagem. Responda em tópicos limpos, diretos e objetivos em português.'
+      const prompt = `Gere sugestões de exercícios e atividades domiciliares personalizadas para o paciente de ${ageStr} com a seguinte queixa fonoaudiológica: "${anamnesisValues.complaint}".`
+      
+      const result = await askGemini(prompt, systemInstruction)
+      setSuggestedExercises(result)
+      toast.success('Exercícios gerados com IA!')
+    } catch (error) {
+      console.error(error)
+      toast.error('Erro ao gerar exercícios. Verifique se a GEMINI_API_KEY está configurada.')
+    } finally {
+      setGeneratingExercises(false)
+    }
+  }
+
+  const handleAnalyzeProgress = async () => {
+    if (evolutions.length === 0) {
+      toast.error('Nenhuma evolução cadastrada para analisar o progresso.')
+      return
+    }
+
+    try {
+      setAnalyzingProgress(true)
+      
+      // Concatenar histórico de evoluções
+      const evolutionsText = evolutions
+        .map((evol) => `[Sessão ${evol.date}]: ${evol.notes}`)
+        .join('\n\n')
+
+      const systemInstruction = 'Você é um fonoaudiólogo consultor sênior. Seu papel é analisar o histórico de evoluções clínicas de um paciente em atendimento domiciliar e escrever um parecer clínico de progresso. Aponte de forma direta os principais avanços obtidos, as maiores barreiras ou dificuldades persistentes relatadas e sugira as próximas direções terapêuticas ou condutas para otimizar os resultados. Seja técnico, formal, acolhedor e focado no atendimento domiciliar. Responda em português.'
+      const prompt = `Analise o seguinte histórico de evoluções clínicas para o paciente ${patient.name}:\n\n${evolutionsText}`
+      
+      const result = await askGemini(prompt, systemInstruction)
+      setAiProgressAnalysis(result)
+      toast.success('Análise de progresso gerada com IA!')
+    } catch (error) {
+      console.error(error)
+      toast.error('Erro ao gerar análise de progresso com IA.')
+    } finally {
+      setAnalyzingProgress(false)
+    }
+  }
 
   const handleChange = (event) => {
     const { name, value, type, checked } = event.target
@@ -258,15 +411,45 @@ function EvolutionModal({ isOpen, onClose, patient }) {
                   onChange={handleChange}
                   required
                 />
-                <InputField
-                  label="Anotações Clínicas"
-                  type="textarea"
-                  name="notes"
-                  value={formValues.notes}
-                  onChange={handleChange}
-                  placeholder="Descreva as atividades, progresso e comportamento do paciente durante a sessão..."
-                  required
-                />
+                
+                {/* Campo de Anotações Clínicas Customizado com Microfone */}
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-noble-700 dark:text-noble-300">
+                      Anotações Clínicas *
+                    </span>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={toggleSpeech}
+                        className={`text-[11px] px-2 py-0.5 rounded-lg border font-semibold flex items-center gap-1 transition ${
+                          isListening
+                            ? 'bg-red-500 border-red-500 text-white animate-pulse'
+                            : 'bg-white dark:bg-noble-800 border-noble-300 dark:border-noble-700 text-noble-700 dark:text-noble-300 hover:bg-noble-50 dark:hover:bg-noble-750'
+                        }`}
+                      >
+                        <span>{isListening ? 'Ouvindo... 🛑' : 'Ditar 🎙️'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleRefineNotes}
+                        disabled={refiningText}
+                        className="text-[11px] px-2 py-0.5 rounded-lg border font-semibold flex items-center gap-1 transition bg-white dark:bg-noble-800 border-noble-300 dark:border-noble-700 text-plum-600 dark:text-plum-400 hover:bg-plum-50 dark:hover:bg-noble-750 disabled:opacity-50"
+                      >
+                        <span>{refiningText ? 'Refinando... ✨' : 'Melhorar notas ✨'}</span>
+                      </button>
+                    </div>
+                  </div>
+                  <textarea
+                    name="notes"
+                    value={formValues.notes}
+                    onChange={handleChange}
+                    placeholder="Descreva as atividades, progresso e comportamento do paciente durante a sessão..."
+                    rows={4}
+                    className="w-full rounded-xl border border-noble-200 dark:border-noble-700 bg-white dark:bg-noble-800 px-4 py-2.5 text-sm text-noble-800 dark:text-noble-100 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-plum-300 dark:focus:ring-plum-800"
+                    required
+                  />
+                </div>
 
                 <div className="flex items-center gap-2 rounded-xl bg-plum-50/50 dark:bg-plum-950/20 p-3.5 border border-plum-100 dark:border-plum-900/60">
                   <input
@@ -294,7 +477,35 @@ function EvolutionModal({ isOpen, onClose, patient }) {
 
             {/* Coluna Direita: Histórico */}
             <div className="flex flex-col overflow-y-auto">
-              <h4 className="mb-4 text-base font-bold text-noble-800 dark:text-noble-100">Histórico de Atendimentos</h4>
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-base font-bold text-noble-800 dark:text-noble-100">Histórico de Atendimentos</h4>
+                {evolutions.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleAnalyzeProgress}
+                    disabled={analyzingProgress}
+                    className="text-xs px-2.5 py-1 rounded-lg border border-noble-300 dark:border-noble-700 font-semibold flex items-center gap-1 transition bg-white dark:bg-noble-800 text-plum-600 dark:text-plum-400 hover:bg-plum-50 dark:hover:bg-noble-750 disabled:opacity-50"
+                  >
+                    <span>{analyzingProgress ? 'Analisando... 📈' : 'Análise com IA 📈'}</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Box de Análise de Progresso por IA */}
+              {aiProgressAnalysis && (
+                <div className="rounded-xl border border-plum-200 dark:border-plum-900 bg-plum-50/50 dark:bg-plum-950/10 p-4 mb-4 relative group transition-all duration-200">
+                  <button
+                    type="button"
+                    onClick={() => setAiProgressAnalysis('')}
+                    className="absolute right-3 top-3 text-[10px] text-neutral-450 hover:text-red-500 font-bold"
+                  >
+                    Fechar Análise
+                  </button>
+                  <h5 className="text-xs font-bold text-plum-700 dark:text-plum-300 uppercase tracking-wider mb-2">Parecer de Progresso (IA)</h5>
+                  <p className="whitespace-pre-wrap text-xs text-neutral-700 dark:text-neutral-300 leading-relaxed font-sans">{aiProgressAnalysis}</p>
+                </div>
+              )}
+
               {loadingList ? (
                 <div className="flex flex-1 items-center justify-center py-10">
                   <div className="h-8 w-8 animate-spin rounded-full border-4 border-plum-200 border-t-plum-600" />
@@ -396,13 +607,32 @@ function EvolutionModal({ isOpen, onClose, patient }) {
                   placeholder="Diretrizes iniciais do plano terapêutico..."
                 />
 
-                <button
-                  type="submit"
-                  disabled={savingAnamnesis}
-                  className="rounded-xl bg-plum-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-plum-700 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {savingAnamnesis ? 'Salvando Anamnese...' : 'Salvar Anamnese'}
-                </button>
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="submit"
+                    disabled={savingAnamnesis}
+                    className="rounded-xl bg-plum-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-plum-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {savingAnamnesis ? 'Salvando Anamnese...' : 'Salvar Anamnese'}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleGenerateExercises}
+                    disabled={generatingExercises || !anamnesisValues.complaint}
+                    className="rounded-xl border border-green-600 dark:border-green-800 bg-white dark:bg-noble-850 px-6 py-3 text-sm font-semibold text-green-600 dark:text-green-400 transition hover:bg-green-50 dark:hover:bg-noble-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {generatingExercises ? 'Gerando Exercícios... 🎯' : 'Sugerir Exercícios com IA 🎯'}
+                  </button>
+                </div>
+
+                {/* Box de Sugestões de Exercícios de IA */}
+                {suggestedExercises && (
+                  <div className="rounded-xl border border-green-200 dark:border-green-950 bg-green-50/50 dark:bg-green-950/10 p-5 mt-6 transition-colors duration-200">
+                    <h5 className="text-sm font-bold text-green-700 dark:text-green-300 uppercase tracking-wider mb-2">Sugestões de Atividades Domiciliares (IA)</h5>
+                    <p className="whitespace-pre-wrap text-sm text-neutral-800 dark:text-neutral-200 leading-relaxed font-sans">{suggestedExercises}</p>
+                  </div>
+                )}
               </form>
             )}
           </div>
