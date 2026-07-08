@@ -44,5 +44,7 @@ export function normalizePatientPayload(values, userId) {
     remainingSessions: calculateRemainingSessions(totalSessions, completedSessions),
     status: calculateRemainingSessions(totalSessions, completedSessions) > 0 ? 'Ativo' : 'Finalizado',
     userId,
+    tcleAccepted: !!values.tcleAccepted,
+    tcleAcceptedAt: values.tcleAccepted ? new Date().toISOString() : null,
   }
 }

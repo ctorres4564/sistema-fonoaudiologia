@@ -14,6 +14,7 @@ const initialValues = {
   sessionsPerWeek: 1,
   totalSessions: 1,
   completedSessions: 0,
+  tcleAccepted: false,
 }
 
 function PatientFormModal({ isOpen, onClose, onSubmit, loading, patient }) {
@@ -66,6 +67,7 @@ function PatientFormModal({ isOpen, onClose, onSubmit, loading, patient }) {
         sessionsPerWeek: patient.sessionsPerWeek ?? 1,
         totalSessions: patient.totalSessions ?? 1,
         completedSessions: patient.completedSessions ?? 0,
+        tcleAccepted: patient.tcleAccepted ?? false,
       })
       setErrors({})
       return
@@ -116,6 +118,12 @@ function PatientFormModal({ isOpen, onClose, onSubmit, loading, patient }) {
   const handleSubmit = (event) => {
     event.preventDefault()
     const validationErrors = validatePatientForm(values)
+    
+    // Validação de conformidade da LGPD/TCLE
+    if (!values.tcleAccepted) {
+      validationErrors.tcleAccepted = 'Você deve confirmar o consentimento do paciente (TCLE) para prosseguir.'
+    }
+
     setErrors(validationErrors)
 
     if (Object.keys(validationErrors).length > 0) return
@@ -184,6 +192,30 @@ function PatientFormModal({ isOpen, onClose, onSubmit, loading, patient }) {
               rows={3}
               className="w-full rounded-xl border border-noble-200 dark:border-noble-700 bg-white dark:bg-noble-800 px-4 py-2.5 text-sm text-noble-800 dark:text-noble-100 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-plum-300 dark:focus:ring-plum-800"
             />
+          </div>
+
+          {/* Checkbox de Aceite de Consentimento TCLE / LGPD */}
+          <div className="md:col-span-2 mt-2">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                name="tcleAccepted"
+                checked={values.tcleAccepted}
+                onChange={(e) => {
+                  setValues((prev) => ({ ...prev, tcleAccepted: e.target.checked }))
+                  if (errors.tcleAccepted) {
+                    setErrors((prev) => ({ ...prev, tcleAccepted: undefined }))
+                  }
+                }}
+                className="mt-1 h-4 w-4 rounded border-noble-300 text-plum-600 focus:ring-plum-500"
+              />
+              <span className="text-xs text-noble-600 dark:text-noble-400 leading-relaxed font-medium">
+                Confirmo que o paciente (ou seu responsável legal) deu consentimento explícito para o armazenamento e tratamento digital de seus dados pessoais sensíveis de saúde de acordo com a LGPD e o Termo de Consentimento Livre e Esclarecido (TCLE) da clínica.
+              </span>
+            </label>
+            {errors.tcleAccepted && (
+              <p className="mt-1 text-xs text-red-500 font-semibold">{errors.tcleAccepted}</p>
+            )}
           </div>
 
           <div className="md:col-span-2 flex justify-end gap-3 pt-2">

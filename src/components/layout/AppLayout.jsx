@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import { useTheme } from '../../contexts/useTheme'
@@ -6,6 +6,21 @@ import { useTheme } from '../../contexts/useTheme'
 function AppLayout({ children }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const { isDark, toggleTheme } = useTheme()
+  const [isOnline, setIsOnline] = useState(navigator.onLine)
+
+  // Monitoramento de Conexão com a Internet (Offline/Online)
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true)
+    const handleOffline = () => setIsOnline(false)
+
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
 
   return (
     <div className="flex min-h-screen bg-noble-50 dark:bg-noble-900 transition-colors duration-200">
@@ -30,13 +45,27 @@ function AppLayout({ children }) {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={toggleTheme}
-            className="flex items-center gap-2 rounded-xl border border-noble-300 dark:border-noble-700 bg-noble-50 dark:bg-noble-800 px-4 py-2 text-sm font-semibold text-noble-700 dark:text-noble-300 hover:bg-noble-100 dark:hover:bg-noble-800 transition"
-          >
-            <span>{isDark ? 'Escuro 🌙' : 'Claro ☀️'}</span>
-          </button>
+          <div className="flex items-center gap-3">
+            {/* Status Offline/Online para atendimento Home Care */}
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition ${
+                isOnline
+                  ? 'bg-emerald-100 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-400 border border-emerald-250 dark:border-emerald-850'
+                  : 'bg-red-100 dark:bg-red-950/30 text-red-800 dark:text-red-400 border border-red-250 dark:border-red-850 animate-pulse'
+              }`}
+            >
+              <span className={`h-1.5 w-1.5 rounded-full ${isOnline ? 'bg-emerald-500' : 'bg-red-500'}`} />
+              <span>{isOnline ? 'Online' : 'Offline'}</span>
+            </span>
+
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="flex items-center gap-2 rounded-xl border border-noble-300 dark:border-noble-700 bg-noble-50 dark:bg-noble-800 px-4 py-2 text-sm font-semibold text-noble-700 dark:text-noble-300 hover:bg-noble-100 dark:hover:bg-noble-800 transition"
+            >
+              <span>{isDark ? 'Escuro 🌙' : 'Claro ☀️'}</span>
+            </button>
+          </div>
         </header>
 
         <section className="p-4 md:p-8">

@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import StatCard from '../components/common/StatCard'
 import SkeletonCard from '../components/common/SkeletonCard'
@@ -9,6 +9,11 @@ function DashboardPage() {
   const { patients = [], loadingPatients, schedules = [], loadingSchedules } = useOutletContext()
 
   const stats = useMemo(() => getDashboardStats(patients), [patients])
+
+  // Estado do Banner de Onboarding Inicial
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    return !localStorage.getItem('onboarding_completed')
+  })
 
   // Painel de Alertas Clínicos
   const alerts = useMemo(() => {
@@ -101,32 +106,98 @@ function DashboardPage() {
     })
 
     const total = counts.Terapia + counts.Avaliação + counts.Retorno
-    return {
-      counts,
-      total,
-      percentages: {
-        Terapia: total > 0 ? Math.round((counts.Terapia / total) * 100) : 0,
-        Avaliação: total > 0 ? Math.round((counts.Avaliação / total) * 100) : 0,
-        Retorno: total > 0 ? Math.round((counts.Retorno / total) * 100) : 0,
-      }
-    }
+    
+    return [
+      { type: 'Terapia', count: counts.Terapia, pct: total > 0 ? (counts.Terapia / total) * 100 : 0 },
+      { type: 'Avaliação', count: counts.Avaliação, pct: total > 0 ? (counts.Avaliação / total) * 100 : 0 },
+      { type: 'Retorno', count: counts.Retorno, pct: total > 0 ? (counts.Retorno / total) * 100 : 0 },
+    ]
   }, [schedules])
-
-  // Valor máximo para a escala do gráfico de barras
-  const maxWeeklyCount = useMemo(() => {
-    const counts = weeklyAnalytics.map((d) => d.count)
-    return Math.max(...counts, 1)
-  }, [weeklyAnalytics])
 
   const isLoading = loadingPatients || loadingSchedules
 
   return (
     <div className="space-y-6">
       {/* Cabeçalho */}
-      <div>
-        <h2 className="text-2xl font-bold text-noble-800 dark:text-noble-100">Dashboard</h2>
-        <p className="text-sm text-noble-500 dark:text-noble-400">Visão geral dos indicadores do tratamento.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-noble-800 dark:text-noble-100">Dashboard</h2>
+          <p className="text-sm text-noble-500 dark:text-noble-400">Visão geral dos indicadores do tratamento.</p>
+        </div>
       </div>
+
+      {/* Onboarding Banner Interativo do SaaS */}
+      {showOnboarding && (
+        <div className="rounded-2xl border border-plum-200 dark:border-plum-800/80 bg-plum-50/50 dark:bg-plum-950/20 p-5 shadow-sm transition-colors duration-200 relative">
+          <button
+            type="button"
+            onClick={() => {
+              localStorage.setItem('onboarding_completed', 'true')
+              setShowOnboarding(false)
+            }}
+            className="absolute top-4 right-4 text-noble-400 hover:text-noble-600 dark:hover:text-noble-200 text-xs font-bold transition-colors"
+          >
+            Dispensar ✕
+          </button>
+          
+          <h3 className="text-sm font-bold text-plum-900 dark:text-plum-300 flex items-center gap-2">
+            <span>✨</span> Seja bem-vindo ao FonoFlow!
+          </h3>
+          <p className="text-xs text-noble-650 dark:text-noble-300 mt-1.5 leading-relaxed max-w-2xl">
+            Preparamos um guia rápido para ajudar você a dar os primeiros passos e configurar seu consultório domiciliar em menos de 2 minutos. Siga as etapas sugeridas:
+          </p>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 mt-4">
+            <div className="rounded-xl bg-white dark:bg-noble-850 p-4 border border-noble-100 dark:border-noble-800/60 shadow-sm flex flex-col justify-between">
+              <div>
+                <span className="text-[10px] font-bold text-plum-600 dark:text-plum-400">Etapa 1 👥</span>
+                <h4 className="text-xs font-bold text-noble-800 dark:text-noble-100 mt-1">Cadastrar Paciente</h4>
+                <p className="text-[10px] text-noble-500 dark:text-noble-400 mt-1 leading-relaxed">
+                  Adicione seus pacientes de home care incluindo o endereço domiciliar e limite de sessões contratadas.
+                </p>
+              </div>
+              <a
+                href="/pacientes"
+                className="mt-3 text-[11px] font-bold text-plum-600 dark:text-plum-400 hover:underline flex items-center gap-1"
+              >
+                Ir para Pacientes ➔
+              </a>
+            </div>
+
+            <div className="rounded-xl bg-white dark:bg-noble-850 p-4 border border-noble-100 dark:border-noble-800/60 shadow-sm flex flex-col justify-between">
+              <div>
+                <span className="text-[10px] font-bold text-plum-600 dark:text-plum-400">Etapa 2 📅</span>
+                <h4 className="text-xs font-bold text-noble-800 dark:text-noble-100 mt-1">Agendar Visita</h4>
+                <p className="text-[10px] text-noble-500 dark:text-noble-400 mt-1 leading-relaxed">
+                  Defina o dia e horário da consulta e envie o lembrete de confirmação diretamente no WhatsApp do paciente.
+                </p>
+              </div>
+              <a
+                href="/agenda"
+                className="mt-3 text-[11px] font-bold text-plum-600 dark:text-plum-400 hover:underline flex items-center gap-1"
+              >
+                Ir para Agenda ➔
+              </a>
+            </div>
+
+            <div className="rounded-xl bg-white dark:bg-noble-850 p-4 border border-noble-100 dark:border-noble-800/60 shadow-sm flex flex-col justify-between">
+              <div>
+                <span className="text-[10px] font-bold text-plum-600 dark:text-plum-400">Etapa 3 📖</span>
+                <h4 className="text-xs font-bold text-noble-800 dark:text-noble-100 mt-1">Ver o Guia de Uso</h4>
+                <p className="text-[10px] text-noble-500 dark:text-noble-400 mt-1 leading-relaxed">
+                  Entenda como usar o microfone para ditar prontuários por voz e como a IA do DeepSeek melhora suas notas clínicas.
+                </p>
+              </div>
+              <a
+                href="/guia"
+                className="mt-3 text-[11px] font-bold text-plum-600 dark:text-plum-400 hover:underline flex items-center gap-1"
+              >
+                Ler Guia de Uso ➔
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Painel de Alertas */}
       {alerts.length > 0 && (
@@ -161,33 +232,37 @@ function DashboardPage() {
         )}
       </div>
 
-      {/* Seção de Gráficos e Analytics */}
-      {!isLoading && (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          {/* Gráfico 1: Atendimentos da Semana (SVG) */}
+      {/* Seção de Gráficos e Distribuição */}
+      {!isLoading && stats.totalPatients > 0 && (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* Gráfico 1: Atendimentos Semanais (SVG Native) */}
           <div className="rounded-2xl border border-noble-200 dark:border-noble-800 bg-white dark:bg-noble-900 p-5 shadow-card transition-colors duration-200">
-            <h3 className="text-base font-bold text-noble-800 dark:text-noble-100 mb-1">Consultas da Semana</h3>
-            <p className="text-xs text-noble-500 dark:text-noble-400 mb-6">Atendimentos agendados por dia da semana corrente.</p>
-
-            <div className="flex h-48 items-end justify-between px-2">
-              {weeklyAnalytics.map((item) => {
-                const percentage = (item.count / maxWeeklyCount) * 100
+            <h3 className="text-base font-bold text-noble-800 dark:text-noble-100">Agendamentos da Semana</h3>
+            <p className="text-xs text-noble-500 dark:text-noble-400 mt-1">Volume de atendimentos agendados de Segunda a Sábado.</p>
+            
+            <div className="mt-6 flex h-48 items-end justify-between px-2">
+              {weeklyAnalytics.map((day) => {
+                const maxCount = Math.max(...weeklyAnalytics.map((d) => d.count), 1)
+                const heightPercent = (day.count / maxCount) * 100
+                
                 return (
-                  <div key={item.label} className="flex flex-1 flex-col items-center gap-2">
-                    {/* Exibição da contagem acima da barra */}
-                    <span className="text-xs font-bold text-noble-700 dark:text-noble-300">
-                      {item.count}
+                  <div key={day.key} className="flex flex-col items-center gap-2 flex-1 group">
+                    {/* Tooltip com a quantidade */}
+                    <span className="text-[10px] font-bold text-plum-600 dark:text-plum-400 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                      {day.count}
                     </span>
-                    {/* Barra Animada */}
-                    <div className="w-8 sm:w-10 bg-neutral-100 dark:bg-noble-800 rounded-t-lg h-32 flex items-end overflow-hidden">
-                      <div
-                        style={{ height: `${percentage}%` }}
-                        className="w-full bg-plum-600 dark:bg-plum-500 rounded-t-lg transition-all duration-500"
+                    
+                    {/* Barra SVG/CSS */}
+                    <div className="w-8 sm:w-10 bg-noble-100 dark:bg-noble-800 rounded-t-lg overflow-hidden h-32 flex items-end">
+                      <div 
+                        style={{ height: `${heightPercent}%` }}
+                        className="w-full bg-plum-600 dark:bg-plum-500 rounded-t-lg transition-all duration-500 ease-out"
                       />
                     </div>
+                    
                     {/* Dia da semana */}
-                    <span className="text-xs font-medium text-noble-500 dark:text-noble-400">
-                      {item.label}
+                    <span className="text-xs font-semibold text-noble-550 dark:text-noble-400">
+                      {day.label}
                     </span>
                   </div>
                 )
@@ -195,78 +270,49 @@ function DashboardPage() {
             </div>
           </div>
 
-          {/* Gráfico 2: Distribuição por Tipo de Atendimento */}
-          <div className="rounded-2xl border border-noble-200 dark:border-noble-800 bg-white dark:bg-noble-900 p-5 shadow-card transition-colors duration-200 flex flex-col justify-between">
-            <div>
-              <h3 className="text-base font-bold text-noble-800 dark:text-noble-100 mb-1">Distribuição de Consultas</h3>
-              <p className="text-xs text-noble-500 dark:text-noble-400 mb-6">Proporção por categoria de atendimento domiciliar.</p>
+          {/* Gráfico 2: Distribuição por Tipo (Progress Bars) */}
+          <div className="rounded-2xl border border-noble-200 dark:border-noble-800 bg-white dark:bg-noble-900 p-5 shadow-card transition-colors duration-200">
+            <h3 className="text-base font-bold text-noble-800 dark:text-noble-100">Distribuição de Consultas</h3>
+            <p className="text-xs text-noble-500 dark:text-noble-400 mt-1">Porcentagem das sessões marcadas divididas por categoria.</p>
+            
+            <div className="mt-6 space-y-5">
+              {typeAnalytics.map((item) => {
+                const accentColor = {
+                  Terapia: 'bg-plum-600 dark:bg-plum-500',
+                  Avaliação: 'bg-emerald-600 dark:bg-emerald-500',
+                  Retorno: 'bg-gold-500',
+                }[item.type]
+
+                return (
+                  <div key={item.type} className="space-y-1.5">
+                    <div className="flex justify-between text-xs font-semibold text-noble-700 dark:text-noble-300">
+                      <span>{item.type}</span>
+                      <span>{item.count} ({item.pct.toFixed(0)}%)</span>
+                    </div>
+                    
+                    {/* Barra de progresso */}
+                    <div className="h-3 w-full rounded-full bg-noble-100 dark:bg-noble-800 overflow-hidden">
+                      <div
+                        style={{ width: `${item.pct}%` }}
+                        className={`h-full rounded-full transition-all duration-500 ease-out ${accentColor}`}
+                      />
+                    </div>
+                  </div>
+                )
+              })}
             </div>
-
-            {typeAnalytics.total === 0 ? (
-              <div className="flex flex-1 items-center justify-center py-8 text-center text-xs text-noble-400">
-                Nenhum agendamento cadastrado para gerar estatísticas.
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {/* Terapia */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs font-semibold">
-                    <span className="text-plum-700 dark:text-plum-300">Terapia</span>
-                    <span className="text-noble-600 dark:text-noble-400">
-                      {typeAnalytics.counts.Terapia} ({typeAnalytics.percentages.Terapia}%)
-                    </span>
-                  </div>
-                  <div className="h-3 w-full bg-neutral-100 dark:bg-noble-800 rounded-full overflow-hidden">
-                    <div
-                      style={{ width: `${typeAnalytics.percentages.Terapia}%` }}
-                      className="h-full bg-plum-600 dark:bg-plum-500 rounded-full transition-all duration-500"
-                    />
-                  </div>
-                </div>
-
-                {/* Avaliação */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs font-semibold">
-                    <span className="text-emerald-700 dark:text-emerald-300 font-bold">Avaliação</span>
-                    <span className="text-noble-600 dark:text-noble-400">
-                      {typeAnalytics.counts.Avaliação} ({typeAnalytics.percentages.Avaliação}%)
-                    </span>
-                  </div>
-                  <div className="h-3 w-full bg-neutral-100 dark:bg-noble-800 rounded-full overflow-hidden">
-                    <div
-                      style={{ width: `${typeAnalytics.percentages.Avaliação}%` }}
-                      className="h-full bg-emerald-650 dark:bg-emerald-500 rounded-full transition-all duration-500"
-                    />
-                  </div>
-                </div>
-
-                {/* Retorno */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs font-semibold">
-                    <span className="text-gold-650 dark:text-gold-400 font-bold">Retorno</span>
-                    <span className="text-noble-600 dark:text-noble-400">
-                      {typeAnalytics.counts.Retorno} ({typeAnalytics.percentages.Retorno}%)
-                    </span>
-                  </div>
-                  <div className="h-3 w-full bg-neutral-100 dark:bg-noble-800 rounded-full overflow-hidden">
-                    <div
-                      style={{ width: `${typeAnalytics.percentages.Retorno}%` }}
-                      className="h-full bg-gold-500 rounded-full transition-all duration-500"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}
 
-      {/* Estado Vazio */}
-      {!isLoading && patients.length === 0 && (
-        <EmptyState
-          title="Nenhum paciente cadastrado"
-          description="Comece cadastrando pacientes para visualizar os indicadores clínicos no dashboard."
-        />
+      {/* Estado Vazio de Dashboard */}
+      {!isLoading && stats.totalPatients === 0 && (
+        <div className="mt-6">
+          <EmptyState
+            title="Seu consultório está vazio"
+            description="Cadastre seu primeiro paciente de atendimento domiciliar e faça agendamentos para ver estatísticas e análises completas aqui."
+          />
+        </div>
       )}
     </div>
   )

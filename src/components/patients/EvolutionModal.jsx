@@ -331,6 +331,55 @@ function EvolutionModal({ isOpen, onClose, patient }) {
     }
   }
 
+  const handleExportPatientData = () => {
+    try {
+      const dataToExport = {
+        paciente: {
+          nome: patient.name,
+          telefone: patient.phone,
+          dataNascimento: patient.birthDate,
+          responsavel: patient.guardian,
+          endereco: patient.address,
+          observacoesCadastro: patient.notes,
+          tcleAceito: patient.tcleAccepted ?? false,
+          tcleAceitoEm: patient.tcleAcceptedAt ?? null,
+        },
+        anamnese: {
+          queixaPrincipal: anamnesisValues.complaint,
+          historicoSaude: anamnesisValues.healthHistory,
+          desenvolvimentoFala: anamnesisValues.speechDevelopment,
+          comportamento: anamnesisValues.behavior,
+          notasClinicas: anamnesisValues.clinicalNotes,
+        },
+        evolucoes: evolutions.map((evol) => ({
+          data: evol.date,
+          duracaoMinutos: evol.duration,
+          notasEvolucao: evol.notes,
+        })),
+        exportadoEm: new Date().toISOString(),
+      }
+
+      const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
+        JSON.stringify(dataToExport, null, 2)
+      )}`
+      
+      const downloadAnchor = document.createElement('a')
+      downloadAnchor.setAttribute('href', jsonString)
+      downloadAnchor.setAttribute(
+        'download',
+        `prontuario_${patient.name.toLowerCase().replace(/\s+/g, '_')}.json`
+      )
+      document.body.appendChild(downloadAnchor)
+      downloadAnchor.click()
+      downloadAnchor.remove()
+      
+      toast.success('Prontuário exportado com sucesso (Portabilidade LGPD)!')
+    } catch (err) {
+      console.error(err)
+      toast.error('Erro ao exportar prontuário.')
+    }
+  }
+
   if (!isOpen || !patient) return null
 
   return (
@@ -345,6 +394,14 @@ function EvolutionModal({ isOpen, onClose, patient }) {
             </p>
           </div>
           <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleExportPatientData}
+              className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 transition"
+              title="Exportar prontuário em JSON (Portabilidade LGPD)"
+            >
+              Exportar (LGPD) 📤
+            </button>
             <button
               type="button"
               onClick={() => window.open(`/imprimir/paciente/${patient.id}`, '_blank')}
