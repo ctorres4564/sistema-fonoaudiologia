@@ -42,8 +42,18 @@ function RegisterPage() {
       toast.success('Conta criada com sucesso!')
       navigate('/dashboard')
     } catch (error) {
-      toast.error('Não foi possível criar a conta.')
       console.error(error)
+      if (error.code === 'auth/operation-not-allowed') {
+        toast.error('O cadastro por E-mail/Senha não está ativado no Firebase Console! Ative-o em Authentication > Sign-in method.')
+      } else if (error.code === 'auth/email-already-in-use') {
+        toast.error('Este e-mail já está cadastrado em outra conta.')
+      } else if (error.code === 'auth/weak-password') {
+        toast.error('A senha fornecida é muito fraca.')
+      } else if (error.code === 'auth/invalid-email') {
+        toast.error('O formato do e-mail é inválido.')
+      } else {
+        toast.error(error.message || 'Não foi possível criar a conta.')
+      }
     } finally {
       setLoading(false)
     }

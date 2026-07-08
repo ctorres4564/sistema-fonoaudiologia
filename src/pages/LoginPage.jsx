@@ -38,8 +38,14 @@ function LoginPage() {
       toast.success('Login realizado com sucesso!')
       navigate('/dashboard')
     } catch (error) {
-      toast.error('Falha no login. Verifique e-mail e senha.')
       console.error(error)
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        toast.error('E-mail ou senha incorretos.')
+      } else if (error.code === 'auth/operation-not-allowed') {
+        toast.error('O provedor de login E-mail/Senha não está ativo no Firebase.')
+      } else {
+        toast.error(error.message || 'Falha ao realizar login.')
+      }
     } finally {
       setLoading(false)
     }
