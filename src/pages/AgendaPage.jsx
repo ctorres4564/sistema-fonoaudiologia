@@ -21,6 +21,7 @@ function AgendaPage() {
   const [selectedDateStr, setSelectedDateStr] = useState(new Date().toISOString().split('T')[0])
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedSchedule, setSelectedSchedule] = useState(null)
+  const [generalSearch, setGeneralSearch] = useState('')
 
   const currentYear = currentDate.getFullYear()
   const currentMonth = currentDate.getMonth()
@@ -66,6 +67,22 @@ function AgendaPage() {
     return schedulesByDate[selectedDateStr] || []
   }, [schedulesByDate, selectedDateStr])
 
+  // Filtrar e ordenar todos os compromissos gerais da lista de histórico
+  const filteredGeneralSchedules = useMemo(() => {
+    const term = generalSearch.toLowerCase().trim()
+    
+    // Filtrar por busca e ordenar cronologicamente decrescente (mais recentes primeiro)
+    return schedules
+      .filter((sch) => {
+        return sch.patientName?.toLowerCase().includes(term) || sch.sessionType?.toLowerCase().includes(term)
+      })
+      .sort((a, b) => {
+        const dateTimeA = `${a.date || ''}T${a.startTime || ''}`
+        const dateTimeB = `${b.date || ''}T${b.startTime || ''}`
+        return dateTimeB.localeCompare(dateTimeA) // Recentes primeiro
+      })
+  }, [schedules, generalSearch])
+
   // Navegar entre meses
   const prevMonth = () => {
     setCurrentDate(new Date(currentYear, currentMonth - 1, 1))
@@ -99,18 +116,26 @@ function AgendaPage() {
 
     try {
       await removeSchedule(sch.id)
-      toast.success('Agendamento desmarcado com sucesso.')
+      toast.success('Sessão desmarcada com sucesso.')
     } catch (error) {
-      toast.error('Erro ao desmarcar consulta.')
+      toast.error('Erro ao desmarcar sessão.')
       console.error(error)
     }
   }
 
-  // Formatador da data selecionada por extenso (ex: 8 de Julho de 2026)
+  // Formatar data selecionada para exibição
   const formattedSelectedDate = useMemo(() => {
-    const [y, m, d] = selectedDateStr.split('-')
-    const dateObj = new Date(Number(y), Number(m) - 1, Number(d))
-    return dateObj.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })
+    const [year, month, day] = selectedDateStr.split('-')
+    const dateObj = new Date(Number(year), Number(month) - 1, Number(day))
+    
+    const formatted = dateObj.toLocaleDateString('pt-BR', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    })
+    // Capitalizar primeira letra
+    return formatted.charAt(0).toUpperCase() + formatted.slice(1)
   }, [selectedDateStr])
 
   return (
@@ -121,6 +146,7 @@ function AgendaPage() {
           <h2 className="text-2xl font-bold text-noble-800 dark:text-noble-100">Agenda</h2>
           <p className="text-sm text-noble-500 dark:text-noble-400">Controle integrado de datas e horários de atendimentos.</p>
         </div>
+
         <button
           type="button"
           onClick={openCreateModal}
@@ -131,10 +157,10 @@ function AgendaPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-12">
-        {/* Lado Esquerdo: Calendário (8 Colunas) */}
-        <div className="rounded-2xl border border-noble-200 dark:border-noble-800 bg-white dark:bg-noble-900 p-5 shadow-card md:col-span-7 transition-colors duration-200">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-bold text-noble-800 dark:text-noble-100">
+        {/* Lado Esquerdo: Calendário (7 Colunas) */}
+        <div className="rounded-2xl border border-noble-200 dark:border-noble-800 bg-white dark:bg-noble-900 p-5 shadow-card md:col-span-7 flex flex-col transition-colors duration-200">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-noble-200 dark:border-noble-800 pb-3">
+            <h3 className="text-base font-bold text-noble-800 dark:text-noble-100">
               {MONTHS[currentMonth]} de {currentYear}
             </h3>
             <div className="flex gap-2">
@@ -288,6 +314,104 @@ function AgendaPage() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* SEÇÃO EXTRA: LISTA GERAL DE AGENDAMENTOS (HISTÓRICO) */}
+      <div className="rounded-2xl border border-noble-200 dark:border-noble-800 bg-white dark:bg-noble-900 p-5 shadow-card transition-colors duration-200">
+        <div className="border-b border-noble-200 dark:border-noble-800 pb-3 mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h3 className="text-base font-bold text-noble-800 dark:text-noble-100">Lista Geral de Agendamentos</h3>
+            <p className="text-xs text-noble-500 dark:text-noble-400 mt-1">Consulte, edite ou desmarque qualquer consulta registrada no sistema.</p>
+          </div>
+          <div className="w-full sm:w-72">
+            <input
+              type="text"
+              placeholder="Buscar por paciente ou tipo..."
+              value={generalSearch}
+              onChange={(e) => setGeneralSearch(e.target.value)}
+              className="w-full rounded-xl border border-noble-200 dark:border-noble-700 bg-white dark:bg-noble-850 text-noble-800 dark:text-noble-100 px-4 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-plum-300 transition-colors"
+            />
+          </div>
+        </div>
+
+        {loadingSchedules ? (
+          <div className="flex justify-center py-8">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-plum-200 border-t-plum-600" />
+          </div>
+        ) : filteredGeneralSchedules.length === 0 ? (
+          <p className="py-6 text-center text-xs text-noble-500 dark:text-noble-400">Nenhum agendamento encontrado.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-noble-200 dark:divide-noble-800 text-xs">
+              <thead className="bg-noble-100 dark:bg-noble-800/60 text-left">
+                <tr>
+                  <th className="px-4 py-3 font-bold text-noble-700 dark:text-noble-300">Paciente</th>
+                  <th className="px-4 py-3 font-bold text-noble-700 dark:text-noble-300">Data e Hora</th>
+                  <th className="px-4 py-3 font-bold text-noble-700 dark:text-noble-300">Tipo</th>
+                  <th className="px-4 py-3 font-bold text-noble-700 dark:text-noble-300">Observações</th>
+                  <th className="px-4 py-3 text-right font-bold text-noble-700 dark:text-noble-300">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-noble-100 dark:divide-noble-800">
+                {filteredGeneralSchedules.map((sch) => {
+                  const patientPhone = patients.find((p) => p.id === sch.patientId)?.phone || ''
+                  const waLink = getWhatsAppReminderLink(patientPhone, sch.patientName, sch.date, sch.startTime)
+                  const [year, month, day] = sch.date.split('-')
+                  const formattedDate = `${day}/${month}/${year}`
+
+                  const badgeColor = {
+                    Terapia: 'bg-plum-100 dark:bg-plum-950/40 text-plum-700 dark:text-plum-300',
+                    Avaliação: 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300',
+                    Retorno: 'bg-gold-100 dark:bg-gold-950/40 text-gold-700 dark:text-gold-300',
+                  }[sch.sessionType] || 'bg-noble-100 dark:bg-noble-800 text-noble-700 dark:text-noble-300'
+
+                  return (
+                    <tr key={sch.id} className="hover:bg-plum-50/20 dark:hover:bg-plum-950/5">
+                      <td className="px-4 py-3 font-semibold text-noble-800 dark:text-noble-100">{sch.patientName}</td>
+                      <td className="px-4 py-3 text-noble-700 dark:text-noble-300 font-medium">
+                        {formattedDate} às {sch.startTime} - {sch.endTime}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${badgeColor}`}>
+                          {sch.sessionType}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-noble-500 dark:text-noble-400 italic max-w-xs truncate">{sch.notes || '-'}</td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex justify-end gap-3">
+                          {patientPhone && (
+                            <a
+                              href={waLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[11px] text-green-600 dark:text-green-400 hover:underline font-bold"
+                            >
+                              Lembrete 💬
+                            </a>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(sch)}
+                            className="text-[11px] text-plum-600 dark:text-plum-400 hover:underline font-bold"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteSchedule(sch)}
+                            className="text-[11px] text-red-500 hover:underline font-bold"
+                          >
+                            Desmarcar
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       <ScheduleModal
