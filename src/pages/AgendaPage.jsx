@@ -236,10 +236,10 @@ function AgendaPage() {
                 return (
                   <div
                     key={sch.id}
-                    className="group relative rounded-xl border border-noble-200 dark:border-noble-800 bg-white dark:bg-noble-950 p-4 shadow-sm hover:border-noble-300 dark:hover:border-noble-700 transition"
+                    className="group relative rounded-xl border border-noble-200 dark:border-noble-800 bg-white dark:bg-noble-900 p-4 shadow-sm hover:border-noble-300 dark:hover:border-noble-700 transition"
                   >
                     {/* Botões de Ação na Linha */}
-                    <div className="absolute right-3 top-3 flex gap-3 opacity-0 group-hover:opacity-100 transition">
+                    <div className="absolute right-3 top-3 flex gap-3 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition">
                       {patientPhone && (
                         <a
                           href={waLink}
