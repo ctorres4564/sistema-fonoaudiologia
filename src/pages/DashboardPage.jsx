@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import StatCard from '../components/common/StatCard'
 import SkeletonCard from '../components/common/SkeletonCard'
@@ -14,6 +14,13 @@ function DashboardPage() {
   const [showOnboarding, setShowOnboarding] = useState(() => {
     return !localStorage.getItem('onboarding_completed')
   })
+
+  // Registra visualização inicial para ocultar o onboarding em visitas subsequentes
+  useEffect(() => {
+    if (!localStorage.getItem('onboarding_completed')) {
+      localStorage.setItem('onboarding_completed', 'true')
+    }
+  }, [])
 
   // Painel de Alertas Clínicos
   const alerts = useMemo(() => {
