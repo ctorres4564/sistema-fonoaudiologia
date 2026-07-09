@@ -32,9 +32,9 @@ export function getWhatsAppReminderLink(phone, patientName, date, startTime) {
   // Formatar data de YYYY-MM-DD para DD/MM
   let formattedDate = date
   try {
-    const [y, m, d] = date.split('-')
+    const [, m, d] = date.split('-')
     formattedDate = `${d}/${m}`
-  } catch (e) {
+  } catch {
     // Fallback
   }
 

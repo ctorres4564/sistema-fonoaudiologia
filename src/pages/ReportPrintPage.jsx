@@ -194,6 +194,17 @@ function ReportPrintPage() {
               <p className="text-neutral-500 italic">Nenhum registro de evolução encontrado para este paciente.</p>
             ) : (
               evolutions.map((evol) => {
+                if (!evol.date || typeof evol.date !== 'string') {
+                  return (
+                    <div key={evol.id} className="border-l-2 border-neutral-300 pl-4 py-0.5 page-break-inside-avoid">
+                      <p className="font-bold text-neutral-800">
+                        Sessão com data não registrada <span className="text-xs font-normal text-neutral-500">({evol.duration} minutos)</span>
+                      </p>
+                      <p className="text-neutral-700 mt-1 text-justify whitespace-pre-wrap">{evol.notes}</p>
+                    </div>
+                  )
+                }
+
                 const [year, month, day] = evol.date.split('-')
                 const formattedDate = `${day}/${month}/${year}`
 
