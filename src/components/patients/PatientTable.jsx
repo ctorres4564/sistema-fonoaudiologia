@@ -19,11 +19,37 @@ function PatientTable({ patients, onEdit, onDelete, onEvolution }) {
               const remaining = calculateRemainingSessions(patient.totalSessions, patient.completedSessions)
               const status = getPatientStatus(patient)
 
+              let formattedBirth = ''
+              let ageStr = ''
+              if (patient.birthDate) {
+                const [y, m, d] = patient.birthDate.split('-')
+                formattedBirth = `${d}/${m}/${y}`
+                
+                const birth = new Date(Number(y), Number(m) - 1, Number(d))
+                const today = new Date()
+                let age = today.getFullYear() - birth.getFullYear()
+                const monthDiff = today.getMonth() - birth.getMonth()
+                if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+                  age--
+                }
+                ageStr = `${age} ${age === 1 ? 'ano' : 'anos'}`
+              }
+
               return (
                 <tr key={patient.id} className="hover:bg-plum-50/40 dark:hover:bg-plum-950/10">
                   <td className="px-4 py-3">
                     <p className="font-semibold text-noble-800 dark:text-noble-100">{patient.name}</p>
-                    <p className="text-xs text-noble-500 dark:text-noble-400">Responsável: {patient.guardian}</p>
+                    <div className="text-xs text-noble-500 dark:text-noble-400 space-y-0.5 mt-0.5">
+                      {formattedBirth && (
+                        <p>Nascimento: <span className="font-semibold text-noble-700 dark:text-noble-300">{formattedBirth} ({ageStr})</span></p>
+                      )}
+                      <p>Responsável: <span className="font-semibold text-noble-700 dark:text-noble-300">{patient.guardian}</span></p>
+                      {patient.complaint && (
+                        <p className="italic text-plum-600 dark:text-plum-400 font-semibold mt-1">
+                          Queixa: {patient.complaint}
+                        </p>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-noble-700 dark:text-noble-300">{patient.phone}</td>
                   <td className="px-4 py-3 text-noble-700 dark:text-noble-300">

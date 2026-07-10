@@ -382,16 +382,36 @@ function EvolutionModal({ isOpen, onClose, patient }) {
 
   if (!isOpen || !patient) return null
 
+  // Calcular data de nascimento formatada e idade aproximada
+  let formattedBirth = ''
+  let ageStr = ''
+  if (patient.birthDate) {
+    const [y, m, d] = patient.birthDate.split('-')
+    formattedBirth = `${d}/${m}/${y}`
+    
+    // Idade aproximada
+    const birth = new Date(Number(y), Number(m) - 1, Number(d))
+    const today = new Date()
+    let age = today.getFullYear() - birth.getFullYear()
+    const monthDiff = today.getMonth() - birth.getMonth()
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--
+    }
+    ageStr = `${age} ${age === 1 ? 'ano' : 'anos'}`
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="flex h-[90vh] w-full max-w-4xl flex-col rounded-2xl bg-white dark:bg-noble-900 p-6 shadow-2xl transition-colors duration-200">
         {/* Cabeçalho */}
-        <div className="mb-4 flex items-center justify-between border-b border-noble-100 dark:border-noble-800 pb-3">
+        <div className="mb-4 flex flex-col gap-2 border-b border-noble-100 dark:border-noble-800 pb-3 md:flex-row md:items-center md:justify-between">
           <div>
             <h3 className="text-xl font-bold text-noble-800 dark:text-noble-100">Prontuário Clínico</h3>
-            <p className="text-sm text-noble-500 dark:text-noble-400">
-              Paciente: <strong className="text-noble-700 dark:text-noble-300">{patient.name}</strong>
-            </p>
+            <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-noble-500 dark:text-noble-400">
+              <p>Paciente: <strong className="text-noble-750 dark:text-noble-200">{patient.name}</strong></p>
+              {formattedBirth && <p>Nascimento: <strong className="text-noble-750 dark:text-noble-200">{formattedBirth} ({ageStr})</strong></p>}
+              {patient.complaint && <p>Queixa: <strong className="text-noble-750 dark:text-noble-200">{patient.complaint}</strong></p>}
+            </div>
           </div>
           <div className="flex gap-2">
             <button

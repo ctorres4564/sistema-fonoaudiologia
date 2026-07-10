@@ -37,6 +37,7 @@ export function normalizePatientPayload(values, userId) {
     phone: values.phone.trim(),
     birthDate: values.birthDate,
     guardian: values.guardian.trim(),
+    complaint: values.complaint?.trim() || '',
     notes: values.notes?.trim() || '',
     sessionsPerWeek: Number(values.sessionsPerWeek),
     totalSessions,

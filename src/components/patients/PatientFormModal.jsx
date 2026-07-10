@@ -10,6 +10,7 @@ const initialValues = {
   phone: '',
   birthDate: '',
   guardian: '',
+  complaint: '',
   notes: '',
   sessionsPerWeek: 1,
   totalSessions: 1,
@@ -23,6 +24,7 @@ function PatientFormModal({ isOpen, onClose, onSubmit, loading, patient }) {
 
   // Web Speech API para Transcrição de Voz
   const [isListening, setIsListening] = useState(false)
+  const [listeningField, setListeningField] = useState(null) // 'notes' | 'complaint' | null
   const [recognition, setRecognition] = useState(null)
 
   // Configurar Speech Recognition
@@ -36,19 +38,25 @@ function PatientFormModal({ isOpen, onClose, onSubmit, loading, patient }) {
 
       rec.onresult = (event) => {
         const text = event.results[event.results.length - 1][0].transcript
-        setValues((prev) => ({
-          ...prev,
-          notes: prev.notes ? `${prev.notes.trim()} ${text.trim()}.` : `${text.trim()}.`,
-        }))
+        const currentField = rec.targetField || 'notes'
+        setValues((prev) => {
+          const currentValue = prev[currentField] || ''
+          return {
+            ...prev,
+            [currentField]: currentValue ? `${currentValue.trim()} ${text.trim()}.` : `${text.trim()}.`,
+          }
+        })
       }
 
       rec.onerror = (event) => {
         console.error('Erro no reconhecimento de voz:', event.error)
         setIsListening(false)
+        setListeningField(null)
       }
 
       rec.onend = () => {
         setIsListening(false)
+        setListeningField(null)
       }
 
       setRecognition(rec)
@@ -63,6 +71,7 @@ function PatientFormModal({ isOpen, onClose, onSubmit, loading, patient }) {
         phone: patient.phone ?? '',
         birthDate: patient.birthDate ?? '',
         guardian: patient.guardian ?? '',
+        complaint: patient.complaint ?? '',
         notes: patient.notes ?? '',
         sessionsPerWeek: patient.sessionsPerWeek ?? 1,
         totalSessions: patient.totalSessions ?? 1,
@@ -77,7 +86,9 @@ function PatientFormModal({ isOpen, onClose, onSubmit, loading, patient }) {
     setErrors({})
 
     return () => {
-      if (recognition) recognition.stop()
+      if (recognition) {
+        recognition.stop()
+      }
     }
   }, [patient, isOpen, recognition])
 
@@ -86,7 +97,7 @@ function PatientFormModal({ isOpen, onClose, onSubmit, loading, patient }) {
     [values.totalSessions, values.completedSessions],
   )
 
-  const toggleSpeech = () => {
+  const toggleSpeech = (field = 'notes') => {
     if (!recognition) {
       toast.error('O reconhecimento de voz não é suportado pelo seu navegador.')
       return
@@ -94,10 +105,13 @@ function PatientFormModal({ isOpen, onClose, onSubmit, loading, patient }) {
 
     if (isListening) {
       recognition.stop()
+      setListeningField(null)
     } else {
       try {
+        recognition.targetField = field
         recognition.start()
         setIsListening(true)
+        setListeningField(field)
         toast.success('Pode falar, estou ouvindo...')
       } catch (error) {
         console.error(error)
@@ -166,6 +180,34 @@ function PatientFormModal({ isOpen, onClose, onSubmit, loading, patient }) {
             <p className="text-2xl font-bold text-gold-600 dark:text-gold-400">{remainingSessions}</p>
           </div>
 
+          {/* Campo de Queixa Fonoaudiológica Customizado com Suporte à Voz */}
+          <div className="md:col-span-2 flex flex-col gap-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-noble-700 dark:text-noble-300">
+                Queixa Fonoaudiológica
+              </span>
+              <button
+                type="button"
+                onClick={() => toggleSpeech('complaint')}
+                className={`text-[11px] px-2.5 py-1 rounded-lg border font-semibold flex items-center gap-1 transition ${
+                  isListening && listeningField === 'complaint'
+                    ? 'bg-red-500 border-red-500 text-white animate-pulse'
+                    : 'bg-white dark:bg-noble-800 border-noble-300 dark:border-noble-700 text-noble-700 dark:text-noble-300 hover:bg-noble-50 dark:hover:bg-noble-750'
+                }`}
+              >
+                <span>{isListening && listeningField === 'complaint' ? 'Ouvindo... 🛑' : 'Ditar 🎙️'}</span>
+              </button>
+            </div>
+            <textarea
+              name="complaint"
+              value={values.complaint}
+              onChange={handleChange}
+              placeholder="Descreva a queixa de fala, linguagem, comportamento ou desenvolvimento trazida pelo paciente/responsável..."
+              rows={3}
+              className="w-full rounded-xl border border-noble-200 dark:border-noble-700 bg-white dark:bg-noble-800 px-4 py-2.5 text-sm text-noble-800 dark:text-noble-100 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-plum-300 dark:focus:ring-plum-800"
+            />
+          </div>
+
           {/* Campo de Observações Customizado com Suporte à Voz */}
           <div className="md:col-span-2 flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
@@ -174,14 +216,14 @@ function PatientFormModal({ isOpen, onClose, onSubmit, loading, patient }) {
               </span>
               <button
                 type="button"
-                onClick={toggleSpeech}
+                onClick={() => toggleSpeech('notes')}
                 className={`text-[11px] px-2.5 py-1 rounded-lg border font-semibold flex items-center gap-1 transition ${
-                  isListening
+                  isListening && listeningField === 'notes'
                     ? 'bg-red-500 border-red-500 text-white animate-pulse'
                     : 'bg-white dark:bg-noble-800 border-noble-300 dark:border-noble-700 text-noble-700 dark:text-noble-300 hover:bg-noble-50 dark:hover:bg-noble-750'
                 }`}
               >
-                <span>{isListening ? 'Ouvindo... 🛑' : 'Ditar 🎙️'}</span>
+                <span>{isListening && listeningField === 'notes' ? 'Ouvindo... 🛑' : 'Ditar 🎙️'}</span>
               </button>
             </div>
             <textarea
