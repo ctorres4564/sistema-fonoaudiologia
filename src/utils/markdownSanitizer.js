@@ -24,7 +24,6 @@ export function sanitizeAiPlainText(value = '') {
     .replace(/(^|[\s([{])_([^_\n]+)_(?=[\s\])}.,;:!?]|$)/g, '$1$2')
     // Marcadores de lista no início da linha: remover o marcador, preservar o conteúdo.
     .replace(/^\s*[-*+]\s+/gm, '')
-    .replace(/^\s*\d+[.)]\s+/gm, '')
     // Limpeza conservadora de espaços ao fim de linha e excesso de linhas vazias.
     .replace(/[ \t]+$/gm, '')
     .replace(/\n{3,}/g, '\n\n')

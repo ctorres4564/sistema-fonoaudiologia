@@ -35,3 +35,28 @@ test('preserva texto sem Markdown inalterado', () => {
 
   assert.equal(sanitizeAiPlainText(input), input)
 })
+
+test('preserva numeração em sugestões de atividades e remove Markdown restante', () => {
+  const input = `**Sugestões de atividades domiciliares**
+1. Treinar o fonema /s/ em palavras.
+2. Usar [figuras familiares](https://example.com) durante a brincadeira.`
+  const output = `Sugestões de atividades domiciliares
+1. Treinar o fonema /s/ em palavras.
+2. Usar figuras familiares durante a brincadeira.`
+
+  assert.equal(sanitizeAiPlainText(input), output)
+})
+
+test('limpa análise de evolução sem remover siglas, pontuação ou fonemas', () => {
+  const input = `## Análise do Histórico
+__Evolução:__ melhora em motricidade orofacial.
+- Manter treino de /r/ e /s/.
+- Orientar família sobre AVDs.`
+  const output = `Análise do Histórico
+Evolução: melhora em motricidade orofacial.
+Manter treino de /r/ e /s/.
+Orientar família sobre AVDs.`
+
+  assert.equal(sanitizeAiPlainText(input), output)
+})
+

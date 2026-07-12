@@ -207,10 +207,10 @@ function EvolutionModal({ isOpen, onClose, patient }) {
         ageStr = `${age} anos`
       }
 
-      const systemInstruction = 'Você é um fonoaudiólogo especialista em atendimento domiciliar infantil e adulto. Seu papel é propor sugestões práticas, criativas e divertidas de atividades e jogos fonoaudiológicos domiciliares que os pais ou o próprio paciente possam realizar para tratar uma queixa específica de fala ou linguagem. Responda em tópicos limpos, diretos e objetivos em português.'
+      const systemInstruction = 'Você é um fonoaudiólogo especialista em atendimento domiciliar infantil e adulto. Proponha sugestões práticas, criativas e divertidas de atividades e jogos fonoaudiológicos domiciliares que os pais ou o próprio paciente possam realizar para tratar uma queixa específica de fala ou linguagem. Responda em português do Brasil, usando somente texto simples, sem Markdown, sem asteriscos, sem hashtags, sem cercas de código, sem links Markdown e sem títulos decorados. Use parágrafos e listas legíveis em texto simples, preservando numeração, pontuação, siglas, fonemas como /r/ e /s/ e todas as informações clínicas fornecidas. Não invente dados clínicos.'
       const prompt = `Gere sugestões de exercícios e atividades domiciliares personalizadas para o paciente de ${ageStr} com a seguinte queixa fonoaudiológica: "${anamnesisValues.complaint}".`
       
-      const result = await askGemini(prompt, systemInstruction)
+      const result = sanitizeAiPlainText(await askGemini(prompt, systemInstruction))
       setSuggestedExercises(result)
       toast.success('Exercícios gerados com IA!')
     } catch (error) {
@@ -235,10 +235,10 @@ function EvolutionModal({ isOpen, onClose, patient }) {
         .map((evol) => `[Sessão ${evol.date}]: ${evol.notes}`)
         .join('\n\n')
 
-      const systemInstruction = 'Você é um fonoaudiólogo consultor sênior. Seu papel é analisar o histórico de evoluções clínicas de um paciente em atendimento domiciliar e escrever um parecer clínico de progresso. Aponte de forma direta os principais avanços obtidos, as maiores barreiras ou dificuldades persistentes relatadas e sugira as próximas direções terapêuticas ou condutas para otimizar os resultados. Seja técnico, formal, acolhedor e focado no atendimento domiciliar. Responda em português.'
+      const systemInstruction = 'Você é um fonoaudiólogo consultor sênior. Analise o histórico de evoluções clínicas de um paciente em atendimento domiciliar e escreva um parecer clínico de progresso. Aponte de forma direta os principais avanços obtidos, as maiores barreiras ou dificuldades persistentes relatadas e sugira as próximas direções terapêuticas ou condutas para otimizar os resultados. Responda em português do Brasil, usando somente texto simples, sem Markdown, sem asteriscos, sem hashtags, sem cercas de código, sem links Markdown, sem tabelas e sem títulos decorados. Use parágrafos e listas legíveis em texto simples, preservando numeração, pontuação, siglas, fonemas como /r/ e /s/ e todas as informações clínicas do histórico. Não altere, não invente e não acrescente fatos clínicos.'
       const prompt = `Analise o seguinte histórico de evoluções clínicas para o paciente ${patient.name}:\n\n${evolutionsText}`
       
-      const result = await askGemini(prompt, systemInstruction)
+      const result = sanitizeAiPlainText(await askGemini(prompt, systemInstruction))
       setAiProgressAnalysis(result)
       toast.success('Análise de progresso gerada com IA!')
     } catch (error) {
