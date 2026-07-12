@@ -1,8 +1,6 @@
-import { useState } from 'react'
 import { getConsentMessages } from '../../utils/aiPrivacy'
 
 function AIConsentModal({ isOpen, onConfirm, onCancel, actionLabel }) {
-  const [dontAskAgain, setDontAskAgain] = useState(false)
   if (!isOpen) return null
 
   const messages = getConsentMessages()
@@ -28,29 +26,17 @@ function AIConsentModal({ isOpen, onConfirm, onCancel, actionLabel }) {
           </p>
         )}
 
-        <label className="flex items-start gap-3 cursor-pointer mb-6">
-          <input
-            type="checkbox"
-            checked={dontAskAgain}
-            onChange={(e) => setDontAskAgain(e.target.checked)}
-            className="mt-0.5 h-4 w-4 rounded border-noble-300 text-plum-600 focus:ring-plum-500"
-          />
-          <span className="text-xs text-noble-500 dark:text-noble-400 leading-relaxed">
-            {messages.checkboxLabel}
-          </span>
-        </label>
-
         <div className="flex justify-end gap-3">
           <button
             type="button"
-            onClick={() => onCancel()}
+            onClick={onCancel}
             className="rounded-lg border border-noble-300 dark:border-noble-700 px-5 py-2.5 text-sm font-semibold text-noble-700 dark:text-noble-300 hover:bg-noble-50 dark:hover:bg-noble-800 transition"
           >
             {messages.cancelLabel}
           </button>
           <button
             type="button"
-            onClick={() => onConfirm(dontAskAgain)}
+            onClick={() => onConfirm()}
             className="rounded-lg bg-plum-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-plum-700"
           >
             {messages.confirmLabel}

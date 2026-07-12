@@ -1,4 +1,5 @@
 import { auth } from '../firebase/config'
+import { sanitizeAiPlainText } from '../utils/aiPrivacy'
 
 export async function askGemini(prompt, systemInstruction) {
   const user = auth.currentUser
@@ -33,26 +34,9 @@ export async function askGemini(prompt, systemInstruction) {
 
     localStorage.setItem(storageKey, String(currentUsage + 1))
 
-    return stripMarkdown(data.text)
+    return sanitizeAiPlainText(data.text)
   } catch (error) {
     console.error('Error in askGemini service:', error)
     throw error
   }
-}
-
-function stripMarkdown(text) {
-  if (!text) return ''
-  let result = text
-  result = result.replace(/#{1,6}\s+/g, '')
-  result = result.replace(/\*{1,3}/g, '')
-  result = result.replace(/_{1,2}/g, '')
-  result = result.replace(/`{1,3}/g, '')
-  result = result.replace(/~~/g, '')
-  result = result.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-  result = result.replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
-  result = result.replace(/^[-*+]\s+/gm, '- ')
-  result = result.replace(/^\d+\.\s+/gm, '')
-  result = result.replace(/^>\s+/gm, '')
-  result = result.replace(/---+/g, '')
-  return result.trim()
 }

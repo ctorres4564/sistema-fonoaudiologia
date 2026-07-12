@@ -4,9 +4,7 @@ import InputField from '../common/InputField'
 import { createEvolution, removeEvolution, subscribeEvolutions, updatePatient } from '../../services/patientService'
 import { getAnamnesis, saveAnamnesis } from '../../services/anamnesisService'
 import { askGemini } from '../../services/geminiService'
-import { buildSanitizedPrompt, PRIVACY_NOTICE_VERSION, AI_PROVIDER } from '../../utils/aiPrivacy'
-import { logAuditEvent } from '../../services/auditService'
-import { useAuth } from '../../contexts/useAuth'
+import { buildSanitizedPrompt, minimizeClinicalText } from '../../utils/aiPrivacy'
 import AIConsentModal from './AIConsentModal'
 
 const initialValues = {
@@ -25,36 +23,28 @@ const initialAnamnesis = {
 }
 
 function EvolutionModal({ isOpen, onClose, patient }) {
-  const { user } = useAuth()
   const [activeTab, setActiveTab] = useState('evolutions')
 
-  // Estados de Evolução
   const [evolutions, setEvolutions] = useState([])
   const [loadingList, setLoadingList] = useState(true)
   const [formValues, setFormValues] = useState(initialValues)
   const [loadingSubmit, setLoadingSubmit] = useState(false)
   const [refiningText, setRefiningText] = useState(false)
 
-  // Estados de Anamnese
   const [anamnesisValues, setAnamnesisValues] = useState(initialAnamnesis)
   const [loadingAnamnesis, setLoadingAnamnesis] = useState(false)
   const [savingAnamnesis, setSavingAnamnesis] = useState(false)
 
-  // Web Speech API para Transcrição de Voz
   const [isListening, setIsListening] = useState(false)
   const [recognition, setRecognition] = useState(null)
 
-  // Estados dos recursos extras de IA (Exercícios e Progresso)
   const [generatingExercises, setGeneratingExercises] = useState(false)
   const [suggestedExercises, setSuggestedExercises] = useState('')
   const [analyzingProgress, setAnalyzingProgress] = useState(false)
   const [aiProgressAnalysis, setAiProgressAnalysis] = useState('')
 
-  // Estados do controle de privacidade da IA
-  const [consentState, setConsentState] = useState({ isOpen: false, actionType: null, actionLabel: '' })
-  const [sessionConsentGiven, setSessionConsentGiven] = useState(false)
+  const [consentState, setConsentState] = useState({ isOpen: false, actionLabel: '' })
 
-  // Configurar Speech Recognition
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
     if (SpeechRecognition) {
@@ -84,7 +74,6 @@ function EvolutionModal({ isOpen, onClose, patient }) {
     }
   }, [])
 
-  // Subescrever nas evoluções em tempo real quando o modal abrir para um paciente
   useEffect(() => {
     if (!isOpen || !patient) return
 
@@ -102,7 +91,6 @@ function EvolutionModal({ isOpen, onClose, patient }) {
       }
     )
 
-    // Resetar formulários, análises antigas e consentimento
     setFormValues({
       date: new Date().toISOString().split('T')[0],
       duration: 50,
@@ -111,10 +99,7 @@ function EvolutionModal({ isOpen, onClose, patient }) {
     })
     setSuggestedExercises('')
     setAiProgressAnalysis('')
-    setSessionConsentGiven(false)
-    setConsentState({ isOpen: false, actionType: null, actionLabel: '' })
 
-    // Resetar para aba inicial ao abrir para novo paciente
     setActiveTab('evolutions')
 
     return () => {
@@ -123,7 +108,6 @@ function EvolutionModal({ isOpen, onClose, patient }) {
     }
   }, [isOpen, patient, recognition])
 
-  // Buscar anamnese quando a aba mudar para 'anamnesis'
   useEffect(() => {
     if (!isOpen || !patient || activeTab !== 'anamnesis') return
 
@@ -172,25 +156,18 @@ function EvolutionModal({ isOpen, onClose, patient }) {
     }
   }
 
-  const requireConsent = (actionType, actionLabel, callback) => {
-    if (sessionConsentGiven) {
-      callback()
-      return
-    }
-    setConsentState({ isOpen: true, actionType, actionLabel, callback })
+  const requireConsent = (actionLabel, callback) => {
+    setConsentState({ isOpen: true, actionLabel, callback })
   }
 
-  const handleConsentConfirm = async (dontAskAgain) => {
+  const handleConfirm = () => {
     const { callback } = consentState
-    setConsentState({ isOpen: false, actionType: null, actionLabel: '', callback: null })
-    if (dontAskAgain) {
-      setSessionConsentGiven(true)
-    }
+    setConsentState({ isOpen: false, actionLabel: '' })
     if (callback) callback()
   }
 
-  const handleConsentCancel = () => {
-    setConsentState({ isOpen: false, actionType: null, actionLabel: '', callback: null })
+  const handleCancel = () => {
+    setConsentState({ isOpen: false, actionLabel: '' })
   }
 
   const handleRefineNotes = async () => {
@@ -199,32 +176,23 @@ function EvolutionModal({ isOpen, onClose, patient }) {
       return
     }
 
-    const execute = async () => {
+    requireConsent('Melhorar notas clínicas com IA', async () => {
       try {
         setRefiningText(true)
+        const minimizedNotes = minimizeClinicalText(formValues.notes.trim(), patient)
         const { prompt, systemInstruction } = buildSanitizedPrompt('refine-notes', {
-          notes: formValues.notes.trim(),
+          notes: minimizedNotes,
         })
         const refined = await askGemini(prompt, systemInstruction)
         setFormValues((prev) => ({ ...prev, notes: refined.trim() }))
         toast.success('Prontuário refinado com IA!')
-        logAuditEvent({
-          uid: user?.uid,
-          action: 'ai_refine_notes',
-          resourceType: 'evolution',
-          resourceId: patient?.id,
-          result: 'success',
-          metadata: { consentVersion: PRIVACY_NOTICE_VERSION, provider: AI_PROVIDER },
-        })
       } catch (error) {
         console.error(error)
-        toast.error('Erro ao refinar com IA. Verifique se a OPENROUTER_API_KEY está configurada no painel da Vercel.')
+        toast.error('Erro ao refinar com IA.')
       } finally {
         setRefiningText(false)
       }
-    }
-
-    requireConsent('refine-notes', 'Melhorar notas clínicas com IA', execute)
+    })
   }
 
   const handleGenerateExercises = async () => {
@@ -233,33 +201,24 @@ function EvolutionModal({ isOpen, onClose, patient }) {
       return
     }
 
-    const execute = async () => {
+    requireConsent('Sugerir exercícios com IA', async () => {
       try {
         setGeneratingExercises(true)
+        const minimizedComplaint = minimizeClinicalText(anamnesisValues.complaint.trim(), patient)
         const { prompt, systemInstruction } = buildSanitizedPrompt('generate-exercises', {
-          complaint: anamnesisValues.complaint.trim(),
+          complaint: minimizedComplaint,
           birthDate: patient.birthDate,
         })
         const result = await askGemini(prompt, systemInstruction)
         setSuggestedExercises(result)
         toast.success('Exercícios gerados com IA!')
-        logAuditEvent({
-          uid: user?.uid,
-          action: 'ai_generate_exercises',
-          resourceType: 'patient',
-          resourceId: patient?.id,
-          result: 'success',
-          metadata: { consentVersion: PRIVACY_NOTICE_VERSION, provider: AI_PROVIDER },
-        })
       } catch (error) {
         console.error(error)
-        toast.error('Erro ao gerar exercícios. Verifique se a OPENROUTER_API_KEY está configurada.')
+        toast.error('Erro ao gerar exercícios.')
       } finally {
         setGeneratingExercises(false)
       }
-    }
-
-    requireConsent('generate-exercises', 'Sugerir exercícios com IA', execute)
+    })
   }
 
   const handleAnalyzeProgress = async () => {
@@ -268,37 +227,28 @@ function EvolutionModal({ isOpen, onClose, patient }) {
       return
     }
 
-    const execute = async () => {
+    requireConsent('Analisar progresso com IA', async () => {
       try {
         setAnalyzingProgress(true)
 
         const evolutionsText = evolutions
           .map((evol) => `[Sessão ${evol.date}]: ${evol.notes}`)
           .join('\n\n')
+        const minimizedText = minimizeClinicalText(evolutionsText, patient)
 
         const { prompt, systemInstruction } = buildSanitizedPrompt('analyze-progress', {
-          evolutionsText,
+          evolutionsText: minimizedText,
         })
         const result = await askGemini(prompt, systemInstruction)
         setAiProgressAnalysis(result)
         toast.success('Análise de progresso gerada com IA!')
-        logAuditEvent({
-          uid: user?.uid,
-          action: 'ai_analyze_progress',
-          resourceType: 'patient',
-          resourceId: patient?.id,
-          result: 'success',
-          metadata: { consentVersion: PRIVACY_NOTICE_VERSION, provider: AI_PROVIDER },
-        })
       } catch (error) {
         console.error(error)
-        toast.error('Erro ao gerar análise de progresso com IA.')
+        toast.error('Erro ao gerar análise de progresso.')
       } finally {
         setAnalyzingProgress(false)
       }
-    }
-
-    requireConsent('analyze-progress', 'Analisar progresso com IA', execute)
+    })
   }
 
   const handleChange = (event) => {
@@ -322,14 +272,12 @@ function EvolutionModal({ isOpen, onClose, patient }) {
     try {
       setLoadingSubmit(true)
 
-      // 1. Criar o registro de evolução
       await createEvolution(patient.id, {
         date: formValues.date,
         duration: Number(formValues.duration) || 50,
         notes: formValues.notes.trim(),
       })
 
-      // 2. Incrementar a sessão do paciente se selecionado
       if (formValues.incrementSession) {
         const nextCompleted = (Number(patient.completedSessions) || 0) + 1
         const remaining = Math.max((Number(patient.totalSessions) || 0) - nextCompleted, 0)
@@ -344,7 +292,6 @@ function EvolutionModal({ isOpen, onClose, patient }) {
 
       toast.success('Evolução clínica registrada com sucesso!')
 
-      // Limpar campo de anotações
       setFormValues((prev) => ({
         ...prev,
         notes: '',
@@ -415,7 +362,7 @@ function EvolutionModal({ isOpen, onClose, patient }) {
       const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
         JSON.stringify(dataToExport, null, 2)
       )}`
-      
+
       const downloadAnchor = document.createElement('a')
       downloadAnchor.setAttribute('href', jsonString)
       downloadAnchor.setAttribute(
@@ -425,7 +372,7 @@ function EvolutionModal({ isOpen, onClose, patient }) {
       document.body.appendChild(downloadAnchor)
       downloadAnchor.click()
       downloadAnchor.remove()
-      
+
       toast.success('Prontuário exportado com sucesso (Portabilidade LGPD)!')
     } catch (err) {
       console.error(err)
@@ -435,14 +382,12 @@ function EvolutionModal({ isOpen, onClose, patient }) {
 
   if (!isOpen || !patient) return null
 
-  // Calcular data de nascimento formatada e idade aproximada
   let formattedBirth = ''
   let ageStr = ''
   if (patient.birthDate) {
     const [y, m, d] = patient.birthDate.split('-')
     formattedBirth = `${d}/${m}/${y}`
-    
-    // Idade aproximada
+
     const birth = new Date(Number(y), Number(m) - 1, Number(d))
     const today = new Date()
     let age = today.getFullYear() - birth.getFullYear()
@@ -456,7 +401,6 @@ function EvolutionModal({ isOpen, onClose, patient }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="flex h-[90vh] w-full max-w-4xl flex-col rounded-2xl bg-white dark:bg-noble-900 p-6 shadow-2xl transition-colors duration-200">
-        {/* Cabeçalho */}
         <div className="mb-4 flex flex-col gap-2 border-b border-noble-100 dark:border-noble-800 pb-3 md:flex-row md:items-center md:justify-between">
           <div>
             <h3 className="text-xl font-bold text-noble-800 dark:text-noble-100">Prontuário Clínico</h3>
@@ -492,7 +436,6 @@ function EvolutionModal({ isOpen, onClose, patient }) {
           </div>
         </div>
 
-        {/* Abas */}
         <div className="mb-6 flex border-b border-noble-200 dark:border-noble-800">
           <button
             type="button"
@@ -518,10 +461,8 @@ function EvolutionModal({ isOpen, onClose, patient }) {
           </button>
         </div>
 
-        {/* Corpo Condicional por Aba */}
         {activeTab === 'evolutions' ? (
           <div className="grid flex-1 grid-cols-1 gap-6 overflow-hidden md:grid-cols-2">
-            {/* Coluna Esquerda: Nova Evolução */}
             <div className="flex flex-col border-r border-noble-100 dark:border-noble-800 pr-0 md:pr-6 overflow-y-auto">
               <h4 className="mb-4 text-base font-bold text-noble-800 dark:text-noble-100">Registrar Sessão</h4>
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -541,8 +482,7 @@ function EvolutionModal({ isOpen, onClose, patient }) {
                   onChange={handleChange}
                   required
                 />
-                
-                {/* Campo de Anotações Clínicas Customizado com Microfone */}
+
                 <div className="flex flex-col gap-1.5">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-noble-700 dark:text-noble-300">
@@ -605,7 +545,6 @@ function EvolutionModal({ isOpen, onClose, patient }) {
               </form>
             </div>
 
-            {/* Coluna Direita: Histórico */}
             <div className="flex flex-col overflow-y-auto">
               <div className="flex items-center justify-between mb-4">
                 <h4 className="text-base font-bold text-noble-800 dark:text-noble-100">Histórico de Atendimentos</h4>
@@ -621,7 +560,6 @@ function EvolutionModal({ isOpen, onClose, patient }) {
                 )}
               </div>
 
-              {/* Box de Análise de Progresso por IA */}
               {aiProgressAnalysis && (
                 <div className="rounded-xl border border-plum-200 dark:border-plum-900 bg-plum-50/50 dark:bg-plum-950/10 p-4 mb-4 relative group transition-all duration-200">
                   <button
@@ -756,7 +694,6 @@ function EvolutionModal({ isOpen, onClose, patient }) {
                   </button>
                 </div>
 
-                {/* Box de Sugestões de Exercícios de IA */}
                 {suggestedExercises && (
                   <div className="rounded-xl border border-green-200 dark:border-green-950 bg-green-50/50 dark:bg-green-950/10 p-5 mt-6 transition-colors duration-200">
                     <h5 className="text-sm font-bold text-green-700 dark:text-green-300 uppercase tracking-wider mb-2">Sugestões de Atividades Domiciliares (IA)</h5>
@@ -770,8 +707,8 @@ function EvolutionModal({ isOpen, onClose, patient }) {
       </div>
       <AIConsentModal
         isOpen={consentState.isOpen}
-        onConfirm={handleConsentConfirm}
-        onCancel={handleConsentCancel}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
         actionLabel={consentState.actionLabel}
       />
     </div>

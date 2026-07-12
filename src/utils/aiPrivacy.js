@@ -1,7 +1,3 @@
-export const PRIVACY_NOTICE_VERSION = '1'
-
-export const AI_PROVIDER = 'Gemini 1.5 Flash'
-
 export function getAgeFromBirthDate(birthDate) {
   if (!birthDate) return null
   const [y, m, d] = birthDate.split('-')
@@ -23,6 +19,141 @@ export function buildAgeLabel(birthDate) {
   if (age <= 17) return 'adolescente de aproximadamente ' + age + ' anos'
   if (age <= 59) return 'adulto de aproximadamente ' + age + ' anos'
   return 'idoso de aproximadamente ' + age + ' anos'
+}
+
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+export function minimizeClinicalText(text, patient) {
+  if (!text) return ''
+
+  let result = text
+
+  const patientNames = []
+  const guardianNames = []
+
+  if (patient?.guardian) {
+    guardianNames.push(patient.guardian)
+    const gParts = patient.guardian.split(/\s+/)
+    if (gParts.length > 1 && gParts[0].length > 1) {
+      guardianNames.push(gParts[0])
+    }
+  }
+
+  if (patient?.name) {
+    patientNames.push(patient.name)
+    const pParts = patient.name.split(/\s+/)
+    if (pParts.length > 1 && pParts[0].length > 1) {
+      patientNames.push(pParts[0])
+    }
+  }
+
+  const replaceNames = (names, marker) => {
+    const sorted = [...names].sort((a, b) => b.length - a.length)
+    for (const name of sorted) {
+      if (!name || name.length < 2) continue
+      const escaped = escapeRegex(name)
+      const regex = new RegExp('\\b' + escaped + '\\b', 'gi')
+      result = result.replace(regex, marker)
+    }
+  }
+
+  replaceNames(guardianNames, '[RESPONSÁVEL]')
+  replaceNames(patientNames, '[PACIENTE]')
+
+  result = result.replace(
+    /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g,
+    '[EMAIL]'
+  )
+
+  const phonePatterns = []
+  if (patient?.phone) {
+    phonePatterns.push(escapeRegex(patient.phone))
+    const digitsOnly = patient.phone.replace(/\D/g, '')
+    if (digitsOnly.length >= 10) {
+      phonePatterns.push(escapeRegex(digitsOnly))
+    }
+  }
+  for (const pattern of phonePatterns) {
+    if (!pattern) continue
+    result = result.replace(new RegExp(pattern, 'g'), '[TELEFONE]')
+  }
+
+  result = result.replace(
+    /\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/g,
+    (match) => {
+      const digits = match.replace(/\D/g, '')
+      if (digits.length === 11) return '[DOCUMENTO]'
+      return match
+    }
+  )
+
+  result = result.replace(
+    /(?:(?:\+?55)?[\s-]?)?(?:\(?\d{2}\)?[\s-]?)?\d{4,5}[-.\s]?\d{4}\b(?!\s*[.-]?\s*\d)/g,
+    (match) => {
+      const digits = match.replace(/\D/g, '')
+      if (digits.length >= 10 && digits.length <= 13) return '[TELEFONE]'
+      return match
+    }
+  )
+
+  result = result.replace(
+    /\b\d{5}-?\d{3}\b/g,
+    (match) => {
+      const digits = match.replace(/\D/g, '')
+      if (digits.length === 8) return '[ENDEREÇO]'
+      return match
+    }
+  )
+
+  result = result.replace(
+    /\b\d{2}\/\d{2}\/\d{4}\b/g,
+    (match) => {
+      const [d, m, y] = match.split('/')
+      const day = parseInt(d, 10)
+      const month = parseInt(m, 10)
+      const year = parseInt(y, 10)
+      if (day >= 1 && day <= 31 && month >= 1 && month <= 12 && year >= 1900 && year <= 2100) {
+        return '[DATA]'
+      }
+      return match
+    }
+  )
+
+  if (patient?.address && patient.address.length > 5) {
+    const fullAddrRegex = new RegExp(escapeRegex(patient.address), 'gi')
+    if (fullAddrRegex.test(result)) {
+      result = result.replace(fullAddrRegex, '[ENDEREÇO]')
+    } else {
+      const addressParts = patient.address.split(/[,;\n]/).map(s => s.trim()).filter(Boolean)
+      for (const part of addressParts) {
+        if (part.length > 5) {
+          const addrRegex = new RegExp(escapeRegex(part), 'gi')
+          result = result.replace(addrRegex, '[ENDEREÇO]')
+        }
+      }
+    }
+  }
+
+  return result
+}
+
+export function sanitizeAiPlainText(text) {
+  if (!text) return ''
+  let result = text
+  result = result.replace(/#{1,6}\s+/g, '')
+  result = result.replace(/\*{1,3}/g, '')
+  result = result.replace(/_{1,2}/g, '')
+  result = result.replace(/`{1,3}/g, '')
+  result = result.replace(/~~/g, '')
+  result = result.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+  result = result.replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
+  result = result.replace(/^[-*+]\s+/gm, '- ')
+  result = result.replace(/^\d+\.\s+/gm, '')
+  result = result.replace(/^>\s+/gm, '')
+  result = result.replace(/---+/g, '')
+  return result.trim()
 }
 
 const AI_ACTIONS = {
@@ -66,13 +197,12 @@ export function getConsentMessages() {
   return {
     title: 'Uso de Inteligência Artificial',
     body: [
-      'O texto clínico que você escrever será enviado a um provedor externo de IA (' + AI_PROVIDER + ') para processamento.',
-      'NÃO inclua nomes, documentos (CPF/RG), telefone, endereço, e-mail ou outros dados pessoais identificáveis do paciente no texto enviado.',
+      'Dados clínicos minimizados serão enviados a um provedor externo de IA (Gemini 1.5 Flash) para processamento.',
+      'Identificadores conhecidos (nome, telefone, e-mail, CPF, endereço, data de nascimento) serão substituídos por marcadores neutros antes do envio.',
       'A resposta gerada pela IA é um apoio textual e deve ser revisada pelo profissional antes de ser incorporada ao prontuário.',
       'A IA não substitui a avaliação clínica, o julgamento profissional nem a responsabilidade legal do fonoaudiólogo.',
     ],
     confirmLabel: 'Confirmar e enviar',
     cancelLabel: 'Cancelar',
-    checkboxLabel: 'Não perguntar novamente nesta sessão',
   }
 }
