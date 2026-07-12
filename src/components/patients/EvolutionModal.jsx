@@ -4,7 +4,7 @@ import InputField from '../common/InputField'
 import { createEvolution, removeEvolution, subscribeEvolutions, updatePatient } from '../../services/patientService'
 import { getAnamnesis, saveAnamnesis } from '../../services/anamnesisService'
 import { askGemini } from '../../services/geminiService'
-import { buildSanitizedPrompt, minimizeClinicalText } from '../../utils/aiPrivacy'
+import { buildSanitizedPrompt, minimizeClinicalText, sanitizeAiPlainText } from '../../utils/aiPrivacy'
 import AIConsentModal from './AIConsentModal'
 
 const initialValues = {
@@ -184,7 +184,7 @@ function EvolutionModal({ isOpen, onClose, patient }) {
           notes: minimizedNotes,
         })
         const refined = await askGemini(prompt, systemInstruction)
-        setFormValues((prev) => ({ ...prev, notes: refined.trim() }))
+        setFormValues((prev) => ({ ...prev, notes: sanitizeAiPlainText(refined).trim() }))
         toast.success('Prontuário refinado com IA!')
       } catch (error) {
         console.error(error)
@@ -210,7 +210,7 @@ function EvolutionModal({ isOpen, onClose, patient }) {
           birthDate: patient.birthDate,
         })
         const result = await askGemini(prompt, systemInstruction)
-        setSuggestedExercises(result)
+        setSuggestedExercises(sanitizeAiPlainText(result))
         toast.success('Exercícios gerados com IA!')
       } catch (error) {
         console.error(error)
@@ -240,7 +240,7 @@ function EvolutionModal({ isOpen, onClose, patient }) {
           evolutionsText: minimizedText,
         })
         const result = await askGemini(prompt, systemInstruction)
-        setAiProgressAnalysis(result)
+        setAiProgressAnalysis(sanitizeAiPlainText(result))
         toast.success('Análise de progresso gerada com IA!')
       } catch (error) {
         console.error(error)

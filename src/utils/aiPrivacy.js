@@ -158,20 +158,20 @@ export function sanitizeAiPlainText(text) {
 
 const AI_ACTIONS = {
   'refine-notes': {
-    systemInstruction: 'Você é um fonoaudiólogo especialista em atendimento domiciliar. Seu papel é receber anotações clínicas informais, rápidas ou desestruturadas e formatá-las em um prontuário técnico formal, claro, de alto padrão clínico fonoaudiológico e em português. Mantenha os fatos relatados exatamente iguais, mas use linguagem profissional técnica fonoaudiológica. Retorne APENAS o prontuário refinado em parágrafo limpo, sem nenhuma introdução ou observação extra.',
+    systemInstruction: 'Você é um fonoaudiólogo especialista em atendimento domiciliar. Receba anotações clínicas informais, rápidas ou desestruturadas e formate-as como prontuário técnico formal, claro, em português do Brasil. Retorne somente texto simples, sem Markdown, sem asteriscos, sem hashtags, sem blocos de código, sem tabelas e sem títulos decorados. Preserve parágrafos e quebras de linha para facilitar a leitura. Não altere, não invente e não acrescente informações clínicas; mantenha os fatos relatados exatamente iguais, apenas melhore a organização e a linguagem profissional.',
     buildPrompt: (clinicalData) => {
       return 'Formate a seguinte anotação clínica em um prontuário técnico fonoaudiológico:\n\n' + clinicalData.notes
     },
   },
   'generate-exercises': {
-    systemInstruction: 'Você é um fonoaudiólogo especialista em atendimento domiciliar infantil e adulto. Seu papel é propor sugestões práticas, criativas e divertidas de atividades e jogos fonoaudiológicos domiciliares que os pais ou o próprio paciente possam realizar para tratar uma queixa específica de fala ou linguagem. Responda em tópicos limpos, diretos e objetivos em português.',
+    systemInstruction: 'Você é um fonoaudiólogo especialista em atendimento domiciliar infantil e adulto. Proponha sugestões práticas, criativas e divertidas de atividades e jogos fonoaudiológicos domiciliares que os pais ou o próprio paciente possam realizar para tratar uma queixa específica de fala ou linguagem. Responda em português do Brasil, usando somente texto simples, sem Markdown, sem asteriscos, sem hashtags, sem cercas de código, sem links Markdown e sem títulos decorados. Use parágrafos e listas legíveis em texto simples, preservando numeração, pontuação, siglas, fonemas como /r/ e /s/ e todas as informações clínicas fornecidas. Não invente dados clínicos.',
     buildPrompt: (clinicalData) => {
       const ageLabel = buildAgeLabel(clinicalData.birthDate)
       return 'Gere sugestões de exercícios e atividades domiciliares personalizadas para ' + ageLabel + ' com a seguinte queixa fonoaudiológica: "' + clinicalData.complaint + '"'
     },
   },
   'analyze-progress': {
-    systemInstruction: 'Você é um fonoaudiólogo consultor sênior. Seu papel é analisar o histórico de evoluções clínicas de um paciente em atendimento domiciliar e escrever um parecer clínico de progresso. Aponte de forma direta os principais avanços obtidos, as maiores barreiras ou dificuldades persistentes relatadas e sugira as próximas direções terapêuticas ou condutas para otimizar os resultados. Seja técnico, formal, acolhedor e focado no atendimento domiciliar. Responda em português.',
+    systemInstruction: 'Você é um fonoaudiólogo consultor sênior. Analise o histórico de evoluções clínicas de um paciente em atendimento domiciliar e escreva um parecer clínico de progresso. Aponte de forma direta os principais avanços obtidos, as maiores barreiras ou dificuldades persistentes relatadas e sugira as próximas direções terapêuticas ou condutas para otimizar os resultados. Responda em português do Brasil, usando somente texto simples, sem Markdown, sem asteriscos, sem hashtags, sem cercas de código, sem links Markdown, sem tabelas e sem títulos decorados. Use parágrafos e listas legíveis em texto simples, preservando numeração, pontuação, siglas, fonemas como /r/ e /s/ e todas as informações clínicas do histórico. Não altere, não invente e não acrescente fatos clínicos.',
     buildPrompt: (clinicalData) => {
       return 'Analise o seguinte histórico de evoluções clínicas e produza um parecer de progresso:\n\n' + clinicalData.evolutionsText
     },

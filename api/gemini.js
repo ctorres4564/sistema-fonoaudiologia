@@ -1,24 +1,77 @@
-export default async function handler(request, response) {
-  // CORS Headers
+import { cert, getApps, initializeApp } from 'firebase-admin/app'
+import { getAuth } from 'firebase-admin/auth'
+
+function configureCors(request, response) {
   const allowedOrigins = [
     'https://fonoflow.vercel.app',
     'http://localhost:3000',
-    'http://localhost:5173'
-  ];
-  const origin = request.headers.origin;
+    'http://localhost:5173',
+  ]
+  const origin = request.headers.origin
 
   if (origin && (allowedOrigins.includes(origin) || /^http:\/\/localhost(:\d+)?$/.test(origin))) {
-    response.setHeader('Access-Control-Allow-Origin', origin);
+    response.setHeader('Access-Control-Allow-Origin', origin)
   } else {
-    response.setHeader('Access-Control-Allow-Origin', 'https://fonoflow.vercel.app');
+    response.setHeader('Access-Control-Allow-Origin', 'https://fonoflow.vercel.app')
   }
 
   response.setHeader('Access-Control-Allow-Credentials', true)
-  response.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT')
+  response.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS')
   response.setHeader(
     'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+    'Authorization, Content-Type, X-Requested-With, Accept, X-Api-Version',
   )
+}
+
+function getFirebaseAdminApp() {
+  if (getApps().length > 0) {
+    return getApps()[0]
+  }
+
+  const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID
+  const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL
+  const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n')
+
+  if (!projectId || !clientEmail || !privateKey) {
+    throw new Error('Firebase Admin credentials are not configured')
+  }
+
+  return initializeApp({
+    credential: cert({
+      projectId,
+      clientEmail,
+      privateKey,
+    }),
+  })
+}
+
+function extractBearerToken(request) {
+  const authorization = request.headers.authorization
+
+  if (!authorization || typeof authorization !== 'string') {
+    return null
+  }
+
+  const [scheme, token, ...extraParts] = authorization.trim().split(/\s+/)
+  if (scheme !== 'Bearer' || !token || extraParts.length > 0) {
+    return null
+  }
+
+  return token
+}
+
+async function verifyFirebaseToken(request) {
+  const token = extractBearerToken(request)
+  if (!token) {
+    return null
+  }
+
+  const app = getFirebaseAdminApp()
+  return getAuth(app).verifyIdToken(token)
+}
+
+export default async function handler(request, response) {
+  configureCors(request, response)
 
   if (request.method === 'OPTIONS') {
     return response.status(200).end()
@@ -27,6 +80,21 @@ export default async function handler(request, response) {
   if (request.method !== 'POST') {
     return response.status(405).json({ error: 'Method not allowed' })
   }
+
+  let decodedToken
+  try {
+    decodedToken = await verifyFirebaseToken(request)
+  } catch (error) {
+    console.error('Firebase token verification failed:', error?.code || error?.message || 'unknown_error')
+    return response.status(401).json({ error: 'Sessão inválida ou expirada. Faça login novamente.' })
+  }
+
+  if (!decodedToken?.uid) {
+    return response.status(401).json({ error: 'Sessão ausente ou inválida. Faça login novamente.' })
+  }
+
+  const authenticatedUid = decodedToken.uid
+  void authenticatedUid
 
   const { prompt, systemInstruction } = request.body
 
@@ -43,7 +111,7 @@ export default async function handler(request, response) {
   const openRouterApiKey = process.env.OPENROUTER_API_KEY
 
   if (!geminiApiKey && !openRouterApiKey) {
-    return response.status(500).json({ error: 'Nenhuma chave de API (GEMINI_API_KEY ou OPENROUTER_API_KEY) está configurada.' })
+    return response.status(500).json({ error: 'Serviço de IA indisponível no momento.' })
   }
 
   try {
@@ -52,32 +120,32 @@ export default async function handler(request, response) {
     if (geminiApiKey) {
       // Chamada direta para a API oficial do Google Gemini 1.5 Flash
       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`
-      
+
       const payload = {
         contents: [
           {
-            parts: [{ text: prompt }]
-          }
-        ]
+            parts: [{ text: prompt }],
+          },
+        ],
       }
 
       if (systemInstruction) {
         payload.systemInstruction = {
-          parts: [{ text: systemInstruction }]
+          parts: [{ text: systemInstruction }],
         }
       }
 
       const apiResponse = await fetch(url, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       })
 
       if (!apiResponse.ok) {
-        const errorText = await apiResponse.text()
-        return response.status(apiResponse.status).json({ error: `Gemini API error: ${errorText}` })
+        console.error('Gemini provider request failed:', apiResponse.status)
+        return response.status(502).json({ error: 'Erro ao obter resposta da Inteligência Artificial.' })
       }
 
       const data = await apiResponse.json()
@@ -96,20 +164,20 @@ export default async function handler(request, response) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${openRouterApiKey}`,
+          Authorization: `Bearer ${openRouterApiKey}`,
           'HTTP-Referer': 'https://fonoflow.vercel.app',
           'X-Title': 'FonoFlow',
         },
         body: JSON.stringify({
           model: 'deepseek/deepseek-chat',
-          messages: messages,
+          messages,
           temperature: 0.7,
         }),
       })
 
       if (!apiResponse.ok) {
-        const errorText = await apiResponse.text()
-        return response.status(apiResponse.status).json({ error: `OpenRouter API error: ${errorText}` })
+        console.error('OpenRouter provider request failed:', apiResponse.status)
+        return response.status(502).json({ error: 'Erro ao obter resposta da Inteligência Artificial.' })
       }
 
       const data = await apiResponse.json()
@@ -118,7 +186,7 @@ export default async function handler(request, response) {
 
     return response.status(200).json({ text: resultText })
   } catch (error) {
-    console.error('Error calling AI API:', error)
+    console.error('Error calling AI API:', error?.message || 'unknown_error')
     return response.status(500).json({ error: 'Internal Server Error' })
   }
 }
