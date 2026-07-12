@@ -4,6 +4,10 @@ import InputField from '../common/InputField'
 import { createEvolution, removeEvolution, subscribeEvolutions, updatePatient } from '../../services/patientService'
 import { getAnamnesis, saveAnamnesis } from '../../services/anamnesisService'
 import { askGemini } from '../../services/geminiService'
+import { buildSanitizedPrompt, PRIVACY_NOTICE_VERSION, AI_PROVIDER } from '../../utils/aiPrivacy'
+import { logAuditEvent } from '../../services/auditService'
+import { useAuth } from '../../contexts/useAuth'
+import AIConsentModal from './AIConsentModal'
 
 const initialValues = {
   date: new Date().toISOString().split('T')[0],
@@ -21,6 +25,7 @@ const initialAnamnesis = {
 }
 
 function EvolutionModal({ isOpen, onClose, patient }) {
+  const { user } = useAuth()
   const [activeTab, setActiveTab] = useState('evolutions')
 
   // Estados de Evolução
@@ -44,6 +49,10 @@ function EvolutionModal({ isOpen, onClose, patient }) {
   const [suggestedExercises, setSuggestedExercises] = useState('')
   const [analyzingProgress, setAnalyzingProgress] = useState(false)
   const [aiProgressAnalysis, setAiProgressAnalysis] = useState('')
+
+  // Estados do controle de privacidade da IA
+  const [consentState, setConsentState] = useState({ isOpen: false, actionType: null, actionLabel: '' })
+  const [sessionConsentGiven, setSessionConsentGiven] = useState(false)
 
   // Configurar Speech Recognition
   useEffect(() => {
@@ -93,7 +102,7 @@ function EvolutionModal({ isOpen, onClose, patient }) {
       }
     )
 
-    // Resetar formulários e análises antigas
+    // Resetar formulários, análises antigas e consentimento
     setFormValues({
       date: new Date().toISOString().split('T')[0],
       duration: 50,
@@ -102,6 +111,8 @@ function EvolutionModal({ isOpen, onClose, patient }) {
     })
     setSuggestedExercises('')
     setAiProgressAnalysis('')
+    setSessionConsentGiven(false)
+    setConsentState({ isOpen: false, actionType: null, actionLabel: '' })
 
     // Resetar para aba inicial ao abrir para novo paciente
     setActiveTab('evolutions')
@@ -161,26 +172,59 @@ function EvolutionModal({ isOpen, onClose, patient }) {
     }
   }
 
+  const requireConsent = (actionType, actionLabel, callback) => {
+    if (sessionConsentGiven) {
+      callback()
+      return
+    }
+    setConsentState({ isOpen: true, actionType, actionLabel, callback })
+  }
+
+  const handleConsentConfirm = async (dontAskAgain) => {
+    const { callback } = consentState
+    setConsentState({ isOpen: false, actionType: null, actionLabel: '', callback: null })
+    if (dontAskAgain) {
+      setSessionConsentGiven(true)
+    }
+    if (callback) callback()
+  }
+
+  const handleConsentCancel = () => {
+    setConsentState({ isOpen: false, actionType: null, actionLabel: '', callback: null })
+  }
+
   const handleRefineNotes = async () => {
     if (!formValues.notes.trim()) {
       toast.error('Escreva ou dite algo primeiro para refinar com a IA.')
       return
     }
 
-    try {
-      setRefiningText(true)
-      const systemInstruction = 'Você é um fonoaudiólogo especialista em atendimento domiciliar. Seu papel é receber anotações clínicas informais, rápidas ou desestruturadas e formatá-las em um prontuário técnico formal, claro, de alto padrão clínico fonoaudiológico e em português. Mantenha os fatos relatados exatamente iguais, mas use linguagem profissional técnica fonoaudiológica. Retorne APENAS o prontuário refinado em parágrafo limpo, sem nenhuma introdução ou observação extra.'
-      const prompt = `Formate a seguinte anotação: "${formValues.notes}"`
-      
-      const refined = await askGemini(prompt, systemInstruction)
-      setFormValues((prev) => ({ ...prev, notes: refined.trim() }))
-      toast.success('Prontuário refinado com IA!')
-    } catch (error) {
-      console.error(error)
-      toast.error('Erro ao refinar com IA. Verifique se a OPENROUTER_API_KEY está configurada no painel da Vercel.')
-    } finally {
-      setRefiningText(false)
+    const execute = async () => {
+      try {
+        setRefiningText(true)
+        const { prompt, systemInstruction } = buildSanitizedPrompt('refine-notes', {
+          notes: formValues.notes.trim(),
+        })
+        const refined = await askGemini(prompt, systemInstruction)
+        setFormValues((prev) => ({ ...prev, notes: refined.trim() }))
+        toast.success('Prontuário refinado com IA!')
+        logAuditEvent({
+          uid: user?.uid,
+          action: 'ai_refine_notes',
+          resourceType: 'evolution',
+          resourceId: patient?.id,
+          result: 'success',
+          metadata: { consentVersion: PRIVACY_NOTICE_VERSION, provider: AI_PROVIDER },
+        })
+      } catch (error) {
+        console.error(error)
+        toast.error('Erro ao refinar com IA. Verifique se a OPENROUTER_API_KEY está configurada no painel da Vercel.')
+      } finally {
+        setRefiningText(false)
+      }
     }
+
+    requireConsent('refine-notes', 'Melhorar notas clínicas com IA', execute)
   }
 
   const handleGenerateExercises = async () => {
@@ -189,35 +233,33 @@ function EvolutionModal({ isOpen, onClose, patient }) {
       return
     }
 
-    try {
-      setGeneratingExercises(true)
-      
-      // Calcular idade aproximada do paciente
-      let ageStr = 'Idade não informada'
-      if (patient.birthDate) {
-        const [y, m, d] = patient.birthDate.split('-')
-        const birth = new Date(Number(y), Number(m) - 1, Number(d))
-        const today = new Date()
-        let age = today.getFullYear() - birth.getFullYear()
-        const monthDiff = today.getMonth() - birth.getMonth()
-        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-          age--
-        }
-        ageStr = `${age} anos`
+    const execute = async () => {
+      try {
+        setGeneratingExercises(true)
+        const { prompt, systemInstruction } = buildSanitizedPrompt('generate-exercises', {
+          complaint: anamnesisValues.complaint.trim(),
+          birthDate: patient.birthDate,
+        })
+        const result = await askGemini(prompt, systemInstruction)
+        setSuggestedExercises(result)
+        toast.success('Exercícios gerados com IA!')
+        logAuditEvent({
+          uid: user?.uid,
+          action: 'ai_generate_exercises',
+          resourceType: 'patient',
+          resourceId: patient?.id,
+          result: 'success',
+          metadata: { consentVersion: PRIVACY_NOTICE_VERSION, provider: AI_PROVIDER },
+        })
+      } catch (error) {
+        console.error(error)
+        toast.error('Erro ao gerar exercícios. Verifique se a OPENROUTER_API_KEY está configurada.')
+      } finally {
+        setGeneratingExercises(false)
       }
-
-      const systemInstruction = 'Você é um fonoaudiólogo especialista em atendimento domiciliar infantil e adulto. Seu papel é propor sugestões práticas, criativas e divertidas de atividades e jogos fonoaudiológicos domiciliares que os pais ou o próprio paciente possam realizar para tratar uma queixa específica de fala ou linguagem. Responda em tópicos limpos, diretos e objetivos em português.'
-      const prompt = `Gere sugestões de exercícios e atividades domiciliares personalizadas para o paciente de ${ageStr} com a seguinte queixa fonoaudiológica: "${anamnesisValues.complaint}".`
-      
-      const result = await askGemini(prompt, systemInstruction)
-      setSuggestedExercises(result)
-      toast.success('Exercícios gerados com IA!')
-    } catch (error) {
-      console.error(error)
-      toast.error('Erro ao gerar exercícios. Verifique se a OPENROUTER_API_KEY está configurada.')
-    } finally {
-      setGeneratingExercises(false)
     }
+
+    requireConsent('generate-exercises', 'Sugerir exercícios com IA', execute)
   }
 
   const handleAnalyzeProgress = async () => {
@@ -226,26 +268,37 @@ function EvolutionModal({ isOpen, onClose, patient }) {
       return
     }
 
-    try {
-      setAnalyzingProgress(true)
-      
-      // Concatenar histórico de evoluções
-      const evolutionsText = evolutions
-        .map((evol) => `[Sessão ${evol.date}]: ${evol.notes}`)
-        .join('\n\n')
+    const execute = async () => {
+      try {
+        setAnalyzingProgress(true)
 
-      const systemInstruction = 'Você é um fonoaudiólogo consultor sênior. Seu papel é analisar o histórico de evoluções clínicas de um paciente em atendimento domiciliar e escrever um parecer clínico de progresso. Aponte de forma direta os principais avanços obtidos, as maiores barreiras ou dificuldades persistentes relatadas e sugira as próximas direções terapêuticas ou condutas para otimizar os resultados. Seja técnico, formal, acolhedor e focado no atendimento domiciliar. Responda em português.'
-      const prompt = `Analise o seguinte histórico de evoluções clínicas para o paciente ${patient.name}:\n\n${evolutionsText}`
-      
-      const result = await askGemini(prompt, systemInstruction)
-      setAiProgressAnalysis(result)
-      toast.success('Análise de progresso gerada com IA!')
-    } catch (error) {
-      console.error(error)
-      toast.error('Erro ao gerar análise de progresso com IA.')
-    } finally {
-      setAnalyzingProgress(false)
+        const evolutionsText = evolutions
+          .map((evol) => `[Sessão ${evol.date}]: ${evol.notes}`)
+          .join('\n\n')
+
+        const { prompt, systemInstruction } = buildSanitizedPrompt('analyze-progress', {
+          evolutionsText,
+        })
+        const result = await askGemini(prompt, systemInstruction)
+        setAiProgressAnalysis(result)
+        toast.success('Análise de progresso gerada com IA!')
+        logAuditEvent({
+          uid: user?.uid,
+          action: 'ai_analyze_progress',
+          resourceType: 'patient',
+          resourceId: patient?.id,
+          result: 'success',
+          metadata: { consentVersion: PRIVACY_NOTICE_VERSION, provider: AI_PROVIDER },
+        })
+      } catch (error) {
+        console.error(error)
+        toast.error('Erro ao gerar análise de progresso com IA.')
+      } finally {
+        setAnalyzingProgress(false)
+      }
     }
+
+    requireConsent('analyze-progress', 'Analisar progresso com IA', execute)
   }
 
   const handleChange = (event) => {
@@ -715,6 +768,12 @@ function EvolutionModal({ isOpen, onClose, patient }) {
           </div>
         )}
       </div>
+      <AIConsentModal
+        isOpen={consentState.isOpen}
+        onConfirm={handleConsentConfirm}
+        onCancel={handleConsentCancel}
+        actionLabel={consentState.actionLabel}
+      />
     </div>
   )
 }

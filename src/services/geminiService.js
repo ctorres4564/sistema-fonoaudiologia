@@ -1,21 +1,18 @@
 import { auth } from '../firebase/config'
 
-/**
- * Faz uma requisição para a rota de API Serverless que se integra ao Google Gemini / OpenRouter.
- * Valida e limita as chamadas de IA do usuário no plano de demonstração.
- * @param {string} prompt - Prompt de instrução principal.
- * @param {string} [systemInstruction] - Instrução do sistema para definir persona e escopo da IA.
- * @returns {Promise<string>}
- */
 export async function askGemini(prompt, systemInstruction) {
-  const userId = auth.currentUser?.uid || 'anonymous'
-  const currentMonth = new Date().toISOString().substring(0, 7) // Formato: YYYY-MM
+  const user = auth.currentUser
+  if (!user) {
+    throw new Error('Usuário não autenticado. Faça login para usar a inteligência artificial.')
+  }
+
+  const userId = user.uid
+  const currentMonth = new Date().toISOString().substring(0, 7)
   const storageKey = `ia_usage_${userId}_${currentMonth}`
 
   const currentUsage = Number(localStorage.getItem(storageKey)) || 0
   const userPlan = (localStorage.getItem('user_plan') || 'demo').toLowerCase()
 
-  // Trava de cota mensal (limite de 20 chamadas no plano demonstrativo)
   if (userPlan !== 'premium' && currentUsage >= 20) {
     throw new Error('Cota de IA excedida! Você utilizou as 20 requisições mensais gratuitas do plano demonstrativo. Assine o plano comercial para liberar uso ilimitado.')
   }
@@ -34,12 +31,28 @@ export async function askGemini(prompt, systemInstruction) {
       throw new Error(data.error || 'Erro ao obter resposta da Inteligência Artificial.')
     }
 
-    // Incrementar contador de uso após sucesso na requisição
     localStorage.setItem(storageKey, String(currentUsage + 1))
 
-    return data.text
+    return stripMarkdown(data.text)
   } catch (error) {
     console.error('Error in askGemini service:', error)
     throw error
   }
+}
+
+function stripMarkdown(text) {
+  if (!text) return ''
+  let result = text
+  result = result.replace(/#{1,6}\s+/g, '')
+  result = result.replace(/\*{1,3}/g, '')
+  result = result.replace(/_{1,2}/g, '')
+  result = result.replace(/`{1,3}/g, '')
+  result = result.replace(/~~/g, '')
+  result = result.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+  result = result.replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
+  result = result.replace(/^[-*+]\s+/gm, '- ')
+  result = result.replace(/^\d+\.\s+/gm, '')
+  result = result.replace(/^>\s+/gm, '')
+  result = result.replace(/---+/g, '')
+  return result.trim()
 }
