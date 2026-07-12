@@ -4,6 +4,7 @@ import InputField from '../common/InputField'
 import { createEvolution, removeEvolution, subscribeEvolutions, updatePatient } from '../../services/patientService'
 import { getAnamnesis, saveAnamnesis } from '../../services/anamnesisService'
 import { askGemini } from '../../services/geminiService'
+import { sanitizeAiPlainText } from '../../utils/markdownSanitizer'
 
 const initialValues = {
   date: new Date().toISOString().split('T')[0],
@@ -169,11 +170,11 @@ function EvolutionModal({ isOpen, onClose, patient }) {
 
     try {
       setRefiningText(true)
-      const systemInstruction = 'Você é um fonoaudiólogo especialista em atendimento domiciliar. Seu papel é receber anotações clínicas informais, rápidas ou desestruturadas e formatá-las em um prontuário técnico formal, claro, de alto padrão clínico fonoaudiológico e em português. Mantenha os fatos relatados exatamente iguais, mas use linguagem profissional técnica fonoaudiológica. Retorne APENAS o prontuário refinado em parágrafo limpo, sem nenhuma introdução ou observação extra.'
+      const systemInstruction = 'Você é um fonoaudiólogo especialista em atendimento domiciliar. Receba anotações clínicas informais, rápidas ou desestruturadas e formate-as como prontuário técnico formal, claro, em português do Brasil. Retorne somente texto simples, sem Markdown, sem asteriscos, sem hashtags, sem blocos de código, sem tabelas e sem títulos decorados. Preserve parágrafos e quebras de linha para facilitar a leitura. Não altere, não invente e não acrescente informações clínicas; mantenha os fatos relatados exatamente iguais, apenas melhore a organização e a linguagem profissional.'
       const prompt = `Formate a seguinte anotação: "${formValues.notes}"`
       
       const refined = await askGemini(prompt, systemInstruction)
-      setFormValues((prev) => ({ ...prev, notes: refined.trim() }))
+      setFormValues((prev) => ({ ...prev, notes: sanitizeAiPlainText(refined) }))
       toast.success('Prontuário refinado com IA!')
     } catch (error) {
       console.error(error)
