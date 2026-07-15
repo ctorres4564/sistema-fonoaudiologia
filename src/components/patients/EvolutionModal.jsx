@@ -537,19 +537,31 @@ function EvolutionModal({ isOpen, onClose, patient }) {
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2 rounded-xl bg-plum-50/50 dark:bg-plum-950/20 p-3.5 border border-plum-100 dark:border-plum-900/60">
+                <label
+                  htmlFor="incrementSession"
+                  className="flex cursor-pointer items-start gap-3 rounded-xl border-2 border-noble-300 bg-white p-4 shadow-sm transition hover:border-plum-400 hover:bg-plum-50/40 dark:border-noble-600 dark:bg-noble-800 dark:hover:border-plum-500 dark:hover:bg-noble-750"
+                >
                   <input
                     type="checkbox"
                     id="incrementSession"
                     name="incrementSession"
                     checked={formValues.incrementSession}
                     onChange={handleChange}
-                    className="h-4 w-4 rounded border-noble-300 dark:border-noble-700 text-plum-600 focus:ring-plum-500"
+                    aria-describedby="increment-session-description"
+                    className="mt-0.5 h-5 w-5 shrink-0 rounded border-2 border-noble-400 bg-white text-plum-600 focus:ring-2 focus:ring-plum-500 focus:ring-offset-2 dark:border-noble-500 dark:bg-noble-900 dark:ring-offset-noble-800"
                   />
-                  <label htmlFor="incrementSession" className="text-xs font-semibold text-plum-900 dark:text-plum-300 cursor-pointer">
-                    Incrementar automaticamente +1 sessão realizada no cadastro do paciente.
-                  </label>
-                </div>
+                  <span className="flex flex-col gap-1">
+                    <span className="text-sm font-bold leading-5 text-noble-900 dark:text-white">
+                      Contabilizar esta evolução como uma sessão realizada
+                    </span>
+                    <span
+                      id="increment-session-description"
+                      className="text-xs font-medium leading-5 text-noble-600 dark:text-noble-300"
+                    >
+                      Quando marcada, soma +1 às sessões realizadas e reduz automaticamente o saldo do paciente.
+                    </span>
+                  </span>
+                </label>
 
                 <button
                   type="submit"
