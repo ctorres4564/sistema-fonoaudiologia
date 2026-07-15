@@ -57,15 +57,15 @@ const anamnesisExportLabels = {
 
 function AnamnesisSection({ title, description, children, open = false }) {
   return (
-    <details open={open} className="group rounded-xl border border-noble-200 bg-noble-50/60 dark:border-noble-700 dark:bg-noble-850">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+    <details open={open} className="group overflow-hidden rounded-xl border-2 border-noble-500 bg-white shadow-md dark:border-noble-400 dark:bg-white">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 border-l-[6px] border-plum-700 bg-white px-5 py-4 transition hover:bg-noble-100 focus:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-plum-500 dark:border-plum-700 dark:bg-white dark:hover:bg-noble-100">
         <span>
-          <span className="block text-sm font-bold text-noble-800 dark:text-noble-100">{title}</span>
-          {description && <span className="mt-0.5 block text-xs font-normal text-noble-500 dark:text-noble-400">{description}</span>}
+          <span className="block text-lg font-extrabold leading-6 tracking-normal text-noble-950 dark:text-noble-950">{title}</span>
+          {description && <span className="mt-1.5 block text-sm font-semibold leading-6 text-noble-700 dark:text-noble-700">{description}</span>}
         </span>
-        <span aria-hidden="true" className="text-lg font-bold text-plum-600 transition group-open:rotate-45">+</span>
+        <span aria-hidden="true" className="min-w-9 rounded-lg bg-plum-800 px-2 py-1 text-center text-xl font-black text-white transition group-open:rotate-45 dark:bg-plum-800 dark:text-white">+</span>
       </summary>
-      <div className="grid grid-cols-1 gap-4 border-t border-noble-200 p-4 dark:border-noble-700 md:grid-cols-2">{children}</div>
+      <div className="grid grid-cols-1 gap-4 border-t border-noble-300 bg-white p-4 dark:border-noble-600 dark:bg-noble-900 md:grid-cols-2">{children}</div>
     </details>
   )
 }
