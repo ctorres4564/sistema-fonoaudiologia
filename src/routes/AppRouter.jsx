@@ -1,19 +1,23 @@
+import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
-import DashboardPage from '../pages/DashboardPage'
-import ForgotPasswordPage from '../pages/ForgotPasswordPage'
-import LoginPage from '../pages/LoginPage'
-import PatientsPage from '../pages/PatientsPage'
-import PrivateAreaPage from '../pages/PrivateAreaPage'
-import RegisterPage from '../pages/RegisterPage'
-import AgendaPage from '../pages/AgendaPage'
-import ReportPrintPage from '../pages/ReportPrintPage'
-import GuidePage from '../pages/GuidePage'
+import LoadingSpinner from '../components/common/LoadingSpinner'
 import ProtectedRoute from './ProtectedRoute'
 import PublicRoute from './PublicRoute'
 
+const DashboardPage = lazy(() => import('../pages/DashboardPage'))
+const ForgotPasswordPage = lazy(() => import('../pages/ForgotPasswordPage'))
+const LoginPage = lazy(() => import('../pages/LoginPage'))
+const PatientsPage = lazy(() => import('../pages/PatientsPage'))
+const PrivateAreaPage = lazy(() => import('../pages/PrivateAreaPage'))
+const RegisterPage = lazy(() => import('../pages/RegisterPage'))
+const AgendaPage = lazy(() => import('../pages/AgendaPage'))
+const ReportPrintPage = lazy(() => import('../pages/ReportPrintPage'))
+const GuidePage = lazy(() => import('../pages/GuidePage'))
+
 function AppRouter() {
   return (
-    <Routes>
+    <Suspense fallback={<LoadingSpinner />}>
+      <Routes>
       <Route
         path="/login"
         element={
@@ -64,7 +68,8 @@ function AppRouter() {
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      </Routes>
+    </Suspense>
   )
 }
 
