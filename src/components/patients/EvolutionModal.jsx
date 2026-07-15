@@ -30,6 +30,7 @@ function EvolutionModal({ isOpen, onClose, patient }) {
   const [formValues, setFormValues] = useState(initialValues)
   const [loadingSubmit, setLoadingSubmit] = useState(false)
   const [refiningText, setRefiningText] = useState(false)
+  const [isNotesExpanded, setIsNotesExpanded] = useState(false)
 
   const [anamnesisValues, setAnamnesisValues] = useState(initialAnamnesis)
   const [loadingAnamnesis, setLoadingAnamnesis] = useState(false)
@@ -488,7 +489,16 @@ function EvolutionModal({ isOpen, onClose, patient }) {
                     <span className="text-sm font-medium text-noble-700 dark:text-noble-300">
                       Anotações Clínicas *
                     </span>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsNotesExpanded((expanded) => !expanded)}
+                        aria-expanded={isNotesExpanded}
+                        aria-controls="clinical-notes-field"
+                        className="text-[11px] px-2 py-0.5 rounded-lg border font-semibold flex items-center gap-1 transition bg-white dark:bg-noble-800 border-noble-300 dark:border-noble-700 text-noble-700 dark:text-noble-200 hover:bg-noble-50 dark:hover:bg-noble-750"
+                      >
+                        <span>{isNotesExpanded ? 'Reduzir campo ↙' : 'Expandir campo ↗'}</span>
+                      </button>
                       <button
                         type="button"
                         onClick={toggleSpeech}
@@ -511,14 +521,20 @@ function EvolutionModal({ isOpen, onClose, patient }) {
                     </div>
                   </div>
                   <textarea
+                    id="clinical-notes-field"
                     name="notes"
                     value={formValues.notes}
                     onChange={handleChange}
                     placeholder="Descreva as atividades, progresso e comportamento do paciente durante a sessão..."
-                    rows={4}
-                    className="w-full rounded-xl border border-noble-200 dark:border-noble-700 bg-white dark:bg-noble-800 px-4 py-2.5 text-sm text-noble-800 dark:text-noble-100 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-plum-300 dark:focus:ring-plum-800"
+                    rows={isNotesExpanded ? 14 : 4}
+                    className={`w-full min-h-28 resize-y rounded-xl border border-noble-200 dark:border-noble-700 bg-white dark:bg-noble-800 px-4 py-2.5 text-sm leading-relaxed text-noble-800 dark:text-noble-100 shadow-sm transition-[min-height,border-color,box-shadow] focus:outline-none focus:ring-2 focus:ring-plum-300 dark:focus:ring-plum-800 ${
+                      isNotesExpanded ? 'min-h-[22rem]' : 'max-h-[60vh]'
+                    }`}
                     required
                   />
+                  <p className="text-[11px] text-noble-500 dark:text-noble-400">
+                    Use “Expandir campo” ou arraste o canto inferior direito para ajustar a área de leitura.
+                  </p>
                 </div>
 
                 <div className="flex items-center gap-2 rounded-xl bg-plum-50/50 dark:bg-plum-950/20 p-3.5 border border-plum-100 dark:border-plum-900/60">
