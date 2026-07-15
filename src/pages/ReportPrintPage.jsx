@@ -3,6 +3,21 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { doc, getDoc, collection, getDocs, orderBy, query } from 'firebase/firestore'
 import { db } from '../firebase/config'
 import { getAnamnesis } from '../services/anamnesisService'
+
+const anamnesisPrintFields = [
+  ['interviewDate', 'Data da entrevista'], ['informant', 'Informante'],
+  ['informantRelationship', 'Relação com o paciente'], ['referralSource', 'Origem do encaminhamento'],
+  ['complaint', 'Queixa principal / motivo da consulta'], ['familyGoals', 'Expectativas, prioridades e objetivos'],
+  ['pregnancyBirthHistory', 'Gestação, nascimento e período neonatal'], ['developmentalHistory', 'Desenvolvimento global'],
+  ['healthHistory', 'Histórico de saúde e diagnósticos'], ['medicationsAllergies', 'Medicamentos e alergias'],
+  ['familyHistory', 'Antecedentes familiares'], ['hearingHistory', 'Histórico auditivo e otorrinolaringológico'],
+  ['speechDevelopment', 'Desenvolvimento de fala e linguagem'], ['languagesCommunication', 'Idiomas e formas de comunicação'],
+  ['educationOccupation', 'Contexto escolar ou profissional'], ['feedingSwallowing', 'Alimentação e deglutição'],
+  ['oralMotorHabits', 'Motricidade orofacial e hábitos orais'], ['breathingSleep', 'Respiração e sono'],
+  ['voiceHistory', 'Voz e demanda vocal'], ['behavior', 'Comportamento e interação social'],
+  ['functionalImpact', 'Impacto funcional e participação'], ['previousCare', 'Avaliações, terapias e exames anteriores'],
+  ['warningSigns', 'Sinais de alerta e intercorrências'], ['clinicalNotes', 'Observações clínicas, condutas e encaminhamentos'],
+]
 import toast from 'react-hot-toast'
 
 function ReportPrintPage() {
@@ -152,36 +167,12 @@ function ReportPrintPage() {
           <section className="mt-8">
             <h3 className="border-b border-neutral-300 pb-1 text-sm font-bold uppercase text-neutral-500">Anamnese e Avaliação Inicial</h3>
             <div className="mt-3 space-y-4 text-sm text-justify">
-              {anamnesis.complaint && (
-                <div>
-                  <p className="font-semibold text-neutral-850">Queixa Principal / Motivo da Consulta:</p>
-                  <p className="text-neutral-700 mt-0.5">{anamnesis.complaint}</p>
+              {anamnesisPrintFields.map(([key, label]) => anamnesis[key] && (
+                <div key={key} className="page-break-inside-avoid">
+                  <p className="font-semibold text-neutral-850">{label}:</p>
+                  <p className="mt-0.5 whitespace-pre-wrap text-neutral-700">{anamnesis[key]}</p>
                 </div>
-              )}
-              {anamnesis.healthHistory && (
-                <div>
-                  <p className="font-semibold text-neutral-850">Histórico de Saúde & Diagnósticos Anteriores:</p>
-                  <p className="text-neutral-700 mt-0.5">{anamnesis.healthHistory}</p>
-                </div>
-              )}
-              {anamnesis.speechDevelopment && (
-                <div>
-                  <p className="font-semibold text-neutral-850">Desenvolvimento de Fala e Linguagem:</p>
-                  <p className="text-neutral-700 mt-0.5">{anamnesis.speechDevelopment}</p>
-                </div>
-              )}
-              {anamnesis.behavior && (
-                <div>
-                  <p className="font-semibold text-neutral-850">Comportamento e Interação Social:</p>
-                  <p className="text-neutral-700 mt-0.5">{anamnesis.behavior}</p>
-                </div>
-              )}
-              {anamnesis.clinicalNotes && (
-                <div>
-                  <p className="font-semibold text-neutral-850">Observações Clínicas e Diretrizes:</p>
-                  <p className="text-neutral-700 mt-0.5">{anamnesis.clinicalNotes}</p>
-                </div>
-              )}
+              ))}
             </div>
           </section>
         )}
