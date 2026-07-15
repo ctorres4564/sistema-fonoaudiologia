@@ -197,7 +197,7 @@ export function getConsentMessages() {
   return {
     title: 'Uso de Inteligência Artificial',
     body: [
-      'Dados clínicos minimizados serão enviados a um provedor externo de IA (Gemini 1.5 Flash) para processamento.',
+      'Dados clínicos minimizados serão enviados ao DeepSeek por meio do OpenRouter para processamento.',
       'Identificadores conhecidos (nome, telefone, e-mail, CPF, endereço, data de nascimento) serão substituídos por marcadores neutros antes do envio.',
       'A resposta gerada pela IA é um apoio textual e deve ser revisada pelo profissional antes de ser incorporada ao prontuário.',
       'A IA não substitui a avaliação clínica, o julgamento profissional nem a responsabilidade legal do fonoaudiólogo.',
