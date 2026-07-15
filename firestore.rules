@@ -1,6 +1,19 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null &&
+        request.auth.uid == userId &&
+        request.resource.data.uid == userId &&
+        request.resource.data.plan == 'demo' &&
+        request.resource.data.keys().hasOnly(['uid', 'name', 'email', 'plan', 'createdAt']);
+      allow update: if request.auth != null &&
+        request.auth.uid == userId &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'email', 'updatedAt']);
+      allow delete: if false;
+    }
+
     match /patients/{patientId} {
       allow read, delete: if request.auth != null && resource.data.userId == request.auth.uid;
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
@@ -25,6 +38,11 @@ service cloud.firestore {
       allow update: if request.auth != null &&
         resource.data.userId == request.auth.uid &&
         request.resource.data.userId == request.auth.uid;
+    }
+
+    // Dados de cobrança, cotas e demais coleções só podem ser acessados pelo backend.
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

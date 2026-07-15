@@ -1,5 +1,10 @@
 import { cert, getApps, initializeApp } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'
+import { getFirestore, FieldValue } from 'firebase-admin/firestore'
+
+const DEMO_MONTHLY_LIMIT = 20
+const PREMIUM_MONTHLY_LIMIT = Number(process.env.PREMIUM_AI_MONTHLY_LIMIT || 1000)
+const PER_MINUTE_LIMIT = Number(process.env.AI_REQUESTS_PER_MINUTE || 10)
 
 function configureCors(request, response) {
   const allowedOrigins = [
@@ -70,6 +75,52 @@ async function verifyFirebaseToken(request) {
   return getAuth(app).verifyIdToken(token)
 }
 
+async function consumeAiQuota(app, uid) {
+  const db = getFirestore(app)
+  const now = new Date()
+  const month = now.toISOString().slice(0, 7)
+  const minute = now.toISOString().slice(0, 16).replace(/[:T]/g, '-')
+  const userRef = db.collection('users').doc(uid)
+  const monthlyRef = db.collection('aiUsage').doc(`${uid}_${month}`)
+  const minuteRef = db.collection('aiRateLimits').doc(`${uid}_${minute}`)
+
+  return db.runTransaction(async (transaction) => {
+    const [userSnap, monthlySnap, minuteSnap] = await Promise.all([
+      transaction.get(userRef),
+      transaction.get(monthlyRef),
+      transaction.get(minuteRef),
+    ])
+
+    const plan = String(userSnap.data()?.plan || 'demo').toLowerCase()
+    const monthlyLimit = plan === 'premium' ? PREMIUM_MONTHLY_LIMIT : DEMO_MONTHLY_LIMIT
+    const monthlyCount = Number(monthlySnap.data()?.count || 0)
+    const minuteCount = Number(minuteSnap.data()?.count || 0)
+
+    if (minuteCount >= PER_MINUTE_LIMIT) {
+      return { allowed: false, status: 429, error: 'Muitas solicitações em pouco tempo. Aguarde um minuto.' }
+    }
+    if (monthlyCount >= monthlyLimit) {
+      return { allowed: false, status: 429, error: `Cota mensal de IA do plano ${plan} excedida.` }
+    }
+
+    transaction.set(monthlyRef, {
+      uid,
+      month,
+      plan,
+      count: monthlyCount + 1,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true })
+    transaction.set(minuteRef, {
+      uid,
+      minute,
+      count: minuteCount + 1,
+      expiresAt: new Date(now.getTime() + 2 * 60 * 1000),
+    }, { merge: true })
+
+    return { allowed: true, plan, remaining: monthlyLimit - monthlyCount - 1 }
+  })
+}
+
 export default async function handler(request, response) {
   configureCors(request, response)
 
@@ -94,7 +145,6 @@ export default async function handler(request, response) {
   }
 
   const authenticatedUid = decodedToken.uid
-  void authenticatedUid
 
   const { prompt, systemInstruction } = request.body
 
@@ -104,6 +154,22 @@ export default async function handler(request, response) {
 
   if (prompt.length > 10000) {
     return response.status(400).json({ error: 'Prompt is too long (maximum 10,000 characters)' })
+  }
+
+  if (systemInstruction && (typeof systemInstruction !== 'string' || systemInstruction.length > 5000)) {
+    return response.status(400).json({ error: 'System instruction is invalid or too long' })
+  }
+
+  let quota
+  try {
+    quota = await consumeAiQuota(getFirebaseAdminApp(), authenticatedUid)
+  } catch (error) {
+    console.error('AI quota validation failed:', error?.message || 'unknown_error')
+    return response.status(503).json({ error: 'Não foi possível validar sua cota de IA.' })
+  }
+
+  if (!quota.allowed) {
+    return response.status(quota.status).json({ error: quota.error })
   }
 
   // Chaves de API das opções (Prioriza Gemini API direta se configurada, senão usa OpenRouter/DeepSeek)
@@ -117,8 +183,40 @@ export default async function handler(request, response) {
   try {
     let resultText = ''
 
-    if (geminiApiKey) {
-      // Chamada direta para a API oficial do Google Gemini 1.5 Flash
+    if (openRouterApiKey) {
+      // Provedor principal: DeepSeek via OpenRouter.
+      const url = 'https://openrouter.ai/api/v1/chat/completions'
+
+      const messages = []
+      if (systemInstruction) {
+        messages.push({ role: 'system', content: systemInstruction })
+      }
+      messages.push({ role: 'user', content: prompt })
+
+      const apiResponse = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${openRouterApiKey}`,
+          'HTTP-Referer': 'https://fonoflow.vercel.app',
+          'X-Title': 'FonoFlow',
+        },
+        body: JSON.stringify({
+          model: process.env.OPENROUTER_MODEL || 'deepseek/deepseek-chat',
+          messages,
+          temperature: 0.7,
+        }),
+      })
+
+      if (!apiResponse.ok) {
+        console.error('OpenRouter provider request failed:', apiResponse.status)
+        return response.status(502).json({ error: 'Erro ao obter resposta da Inteligência Artificial.' })
+      }
+
+      const data = await apiResponse.json()
+      resultText = data?.choices?.[0]?.message?.content || ''
+    } else {
+      // Fallback opcional para Gemini quando o OpenRouter não estiver configurado.
       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`
 
       const payload = {
@@ -150,41 +248,9 @@ export default async function handler(request, response) {
 
       const data = await apiResponse.json()
       resultText = data?.candidates?.[0]?.content?.parts?.[0]?.text || ''
-    } else {
-      // Fallback para OpenRouter / DeepSeek se apenas esta estiver configurada
-      const url = 'https://openrouter.ai/api/v1/chat/completions'
-
-      const messages = []
-      if (systemInstruction) {
-        messages.push({ role: 'system', content: systemInstruction })
-      }
-      messages.push({ role: 'user', content: prompt })
-
-      const apiResponse = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${openRouterApiKey}`,
-          'HTTP-Referer': 'https://fonoflow.vercel.app',
-          'X-Title': 'FonoFlow',
-        },
-        body: JSON.stringify({
-          model: 'deepseek/deepseek-chat',
-          messages,
-          temperature: 0.7,
-        }),
-      })
-
-      if (!apiResponse.ok) {
-        console.error('OpenRouter provider request failed:', apiResponse.status)
-        return response.status(502).json({ error: 'Erro ao obter resposta da Inteligência Artificial.' })
-      }
-
-      const data = await apiResponse.json()
-      resultText = data?.choices?.[0]?.message?.content || ''
     }
 
-    return response.status(200).json({ text: resultText })
+    return response.status(200).json({ text: resultText, remaining: quota.remaining })
   } catch (error) {
     console.error('Error calling AI API:', error?.message || 'unknown_error')
     return response.status(500).json({ error: 'Internal Server Error' })

@@ -24,18 +24,6 @@ export async function askGemini(prompt, systemInstruction) {
     throw new Error(AUTH_ERROR_MESSAGE)
   }
 
-  const userId = currentUser.uid
-  const currentMonth = new Date().toISOString().substring(0, 7) // Formato: YYYY-MM
-  const storageKey = `ia_usage_${userId}_${currentMonth}`
-
-  const currentUsage = Number(localStorage.getItem(storageKey)) || 0
-  const userPlan = (localStorage.getItem('user_plan') || 'demo').toLowerCase()
-
-  // Trava de cota mensal (limite de 20 chamadas no plano demonstrativo)
-  if (userPlan !== 'premium' && currentUsage >= 20) {
-    throw new Error('Cota de IA excedida! Você utilizou as 20 requisições mensais gratuitas do plano demonstrativo. Assine o plano comercial para liberar uso ilimitado.')
-  }
-
   const idToken = await currentUser.getIdToken()
 
   const response = await fetch('/api/gemini', {
@@ -55,9 +43,6 @@ export async function askGemini(prompt, systemInstruction) {
 
     throw new Error(data.error || 'Erro ao obter resposta da Inteligência Artificial.')
   }
-
-  // Incrementar contador de uso após sucesso na requisição
-  localStorage.setItem(storageKey, String(currentUsage + 1))
 
   return data.text
 }
