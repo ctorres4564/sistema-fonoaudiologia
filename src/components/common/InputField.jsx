@@ -29,6 +29,7 @@ function InputField({
           onChange={onChange}
           placeholder={placeholder}
           rows={rows ?? 3}
+          required={required}
           className={sharedClasses}
         />
       ) : (
@@ -39,6 +40,7 @@ function InputField({
           onChange={onChange}
           placeholder={placeholder}
           min={min}
+          required={required}
           className={sharedClasses}
         />
       )}

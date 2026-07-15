@@ -15,11 +15,59 @@ const initialValues = {
 }
 
 const initialAnamnesis = {
+  interviewDate: '',
+  informant: '',
+  informantRelationship: '',
+  referralSource: '',
   complaint: '',
+  familyGoals: '',
+  pregnancyBirthHistory: '',
+  developmentalHistory: '',
   healthHistory: '',
+  medicationsAllergies: '',
+  familyHistory: '',
+  hearingHistory: '',
   speechDevelopment: '',
+  languagesCommunication: '',
+  educationOccupation: '',
+  feedingSwallowing: '',
+  oralMotorHabits: '',
+  breathingSleep: '',
+  voiceHistory: '',
   behavior: '',
+  functionalImpact: '',
+  previousCare: '',
+  warningSigns: '',
   clinicalNotes: '',
+}
+
+const anamnesisExportLabels = {
+  interviewDate: 'Data da entrevista', informant: 'Informante', informantRelationship: 'Relação com o paciente',
+  referralSource: 'Origem do encaminhamento', complaint: 'Queixa principal / motivo da consulta',
+  familyGoals: 'Expectativas e prioridades', pregnancyBirthHistory: 'Gestação, nascimento e período neonatal',
+  developmentalHistory: 'Desenvolvimento global', healthHistory: 'Histórico de saúde e diagnósticos',
+  medicationsAllergies: 'Medicamentos e alergias', familyHistory: 'Antecedentes familiares',
+  hearingHistory: 'Histórico auditivo e otorrinolaringológico', speechDevelopment: 'Desenvolvimento de fala e linguagem',
+  languagesCommunication: 'Idiomas e formas de comunicação', educationOccupation: 'Contexto escolar ou profissional',
+  feedingSwallowing: 'Alimentação e deglutição', oralMotorHabits: 'Motricidade orofacial e hábitos orais',
+  breathingSleep: 'Respiração e sono', voiceHistory: 'Voz e demanda vocal', behavior: 'Comportamento e interação social',
+  functionalImpact: 'Impacto funcional e participação', previousCare: 'Avaliações, terapias e exames anteriores',
+  warningSigns: 'Sinais de alerta e intercorrências', clinicalNotes: 'Observações clínicas, condutas e encaminhamentos',
+}
+
+function AnamnesisSection({ title, description, children, open = false }) {
+  return (
+    <details open={open} className="group rounded-xl border border-noble-200 bg-noble-50/60 dark:border-noble-700 dark:bg-noble-850">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+        <span>
+          <span className="block text-sm font-bold text-noble-800 dark:text-noble-100">{title}</span>
+          {description && <span className="mt-0.5 block text-xs font-normal text-noble-500 dark:text-noble-400">{description}</span>}
+        </span>
+        <span aria-hidden="true" className="text-lg font-bold text-plum-600 transition group-open:rotate-45">+</span>
+      </summary>
+      <div className="grid grid-cols-1 gap-4 border-t border-noble-200 p-4 dark:border-noble-700 md:grid-cols-2">{children}</div>
+    </details>
+  )
 }
 
 function EvolutionModal({ isOpen, onClose, patient }) {
@@ -118,11 +166,8 @@ function EvolutionModal({ isOpen, onClose, patient }) {
         const data = await getAnamnesis(patient.id)
         if (data) {
           setAnamnesisValues({
-            complaint: data.complaint || '',
-            healthHistory: data.healthHistory || '',
-            speechDevelopment: data.speechDevelopment || '',
-            behavior: data.behavior || '',
-            clinicalNotes: data.clinicalNotes || '',
+            ...initialAnamnesis,
+            ...Object.fromEntries(Object.keys(initialAnamnesis).map((key) => [key, data[key] || ''])),
           })
         } else {
           setAnamnesisValues(initialAnamnesis)
@@ -345,13 +390,9 @@ function EvolutionModal({ isOpen, onClose, patient }) {
           tcleAceito: patient.tcleAccepted ?? false,
           tcleAceitoEm: patient.tcleAcceptedAt ?? null,
         },
-        anamnese: {
-          queixaPrincipal: anamnesisValues.complaint,
-          historicoSaude: anamnesisValues.healthHistory,
-          desenvolvimentoFala: anamnesisValues.speechDevelopment,
-          comportamento: anamnesisValues.behavior,
-          notasClinicas: anamnesisValues.clinicalNotes,
-        },
+        anamnese: Object.fromEntries(
+          Object.entries(anamnesisExportLabels).map(([key, label]) => [label, anamnesisValues[key]])
+        ),
         evolucoes: evolutions.map((evol) => ({
           data: evol.date,
           duracaoMinutos: evol.duration,
@@ -652,56 +693,53 @@ function EvolutionModal({ isOpen, onClose, patient }) {
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-plum-200 border-t-plum-600" />
               </div>
             ) : (
-              <form onSubmit={handleSaveAnamnesisForm} className="space-y-6 max-w-2xl pb-6">
+              <form onSubmit={handleSaveAnamnesisForm} className="space-y-4 pb-6">
                 <div>
-                  <h4 className="text-base font-bold text-noble-800 dark:text-noble-100 mb-1">Avaliação e Anamnese</h4>
-                  <p className="text-xs text-noble-500 dark:text-noble-400">Registre o histórico de desenvolvimento e queixas iniciais para o atendimento domiciliar.</p>
+                  <h4 className="mb-1 text-base font-bold text-noble-800 dark:text-noble-100">Avaliação e Anamnese</h4>
+                  <p className="text-xs text-noble-500 dark:text-noble-400">Preencha somente as informações pertinentes. Abra cada seção para organizar a entrevista.</p>
                 </div>
 
-                <InputField
-                  label="Queixa Principal / Motivo da Consulta"
-                  type="textarea"
-                  name="complaint"
-                  value={anamnesisValues.complaint}
-                  onChange={handleAnamnesisChange}
-                  placeholder="Descreva a queixa trazida pelos pais ou responsáveis..."
-                />
+                <AnamnesisSection title="1. Entrevista, encaminhamento e prioridades" description="Identifique a origem das informações e as prioridades do paciente ou família." open>
+                  <InputField label="Data da entrevista" type="date" name="interviewDate" value={anamnesisValues.interviewDate} onChange={handleAnamnesisChange} />
+                  <InputField label="Nome do informante" name="informant" value={anamnesisValues.informant} onChange={handleAnamnesisChange} placeholder="Paciente, responsável ou cuidador" />
+                  <InputField label="Relação com o paciente" name="informantRelationship" value={anamnesisValues.informantRelationship} onChange={handleAnamnesisChange} placeholder="Ex.: mãe, pai, cuidador ou o próprio paciente" />
+                  <InputField label="Origem do encaminhamento" name="referralSource" value={anamnesisValues.referralSource} onChange={handleAnamnesisChange} placeholder="Profissional, escola, serviço ou demanda espontânea" />
+                  <div className="md:col-span-2"><InputField label="Queixa principal / motivo da consulta" type="textarea" rows={4} name="complaint" value={anamnesisValues.complaint} onChange={handleAnamnesisChange} placeholder="Quando começou, como evoluiu e em quais situações ocorre?" required /></div>
+                  <div className="md:col-span-2"><InputField label="Expectativas, prioridades e objetivos" type="textarea" name="familyGoals" value={anamnesisValues.familyGoals} onChange={handleAnamnesisChange} placeholder="O que o paciente ou a família espera alcançar?" /></div>
+                </AnamnesisSection>
 
-                <InputField
-                  label="Histórico de Saúde & Diagnósticos Anteriores"
-                  type="textarea"
-                  name="healthHistory"
-                  value={anamnesisValues.healthHistory}
-                  onChange={handleAnamnesisChange}
-                  placeholder="Informações sobre parto, doenças pregressas, diagnósticos médicos ou outras terapias..."
-                />
+                <AnamnesisSection title="2. Desenvolvimento e histórico de saúde" description="Gestação, nascimento, desenvolvimento, condições clínicas e antecedentes.">
+                  <InputField label="Gestação, nascimento e período neonatal" type="textarea" name="pregnancyBirthHistory" value={anamnesisValues.pregnancyBirthHistory} onChange={handleAnamnesisChange} placeholder="Intercorrências, idade gestacional, parto, peso, UTI ou triagens neonatais." />
+                  <InputField label="Desenvolvimento global" type="textarea" name="developmentalHistory" value={anamnesisValues.developmentalHistory} onChange={handleAnamnesisChange} placeholder="Marcos motores, cognitivos, autonomia e desenvolvimento social." />
+                  <InputField label="Histórico de saúde e diagnósticos" type="textarea" name="healthHistory" value={anamnesisValues.healthHistory} onChange={handleAnamnesisChange} placeholder="Doenças, cirurgias, internações e diagnósticos atuais ou anteriores." />
+                  <InputField label="Medicamentos e alergias" type="textarea" name="medicationsAllergies" value={anamnesisValues.medicationsAllergies} onChange={handleAnamnesisChange} placeholder="Medicamento, finalidade, efeitos percebidos e alergias conhecidas." />
+                  <div className="md:col-span-2"><InputField label="Antecedentes familiares" type="textarea" name="familyHistory" value={anamnesisValues.familyHistory} onChange={handleAnamnesisChange} placeholder="Alterações de fala, linguagem, audição, voz, aprendizagem ou desenvolvimento." /></div>
+                </AnamnesisSection>
 
-                <InputField
-                  label="Desenvolvimento de Fala e Linguagem"
-                  type="textarea"
-                  name="speechDevelopment"
-                  value={anamnesisValues.speechDevelopment}
-                  onChange={handleAnamnesisChange}
-                  placeholder="Marcos do desenvolvimento (idade que começou a balbuciar, primeiras palavras, dificuldades observadas)..."
-                />
+                <AnamnesisSection title="3. Comunicação, audição e contexto" description="História comunicativa, idiomas, audição e participação na escola ou trabalho.">
+                  <InputField label="Histórico auditivo e otorrinolaringológico" type="textarea" name="hearingHistory" value={anamnesisValues.hearingHistory} onChange={handleAnamnesisChange} placeholder="Triagem, audiometria, otites, cirurgias, queixas ou dispositivos." />
+                  <InputField label="Desenvolvimento de fala e linguagem" type="textarea" name="speechDevelopment" value={anamnesisValues.speechDevelopment} onChange={handleAnamnesisChange} placeholder="Balbucio, primeiras palavras, frases, compreensão e inteligibilidade." />
+                  <InputField label="Idiomas e formas de comunicação" type="textarea" name="languagesCommunication" value={anamnesisValues.languagesCommunication} onChange={handleAnamnesisChange} placeholder="Idiomas/dialetos, contextos de uso, gestos, Libras ou comunicação alternativa." />
+                  <InputField label="Contexto escolar ou profissional" type="textarea" name="educationOccupation" value={anamnesisValues.educationOccupation} onChange={handleAnamnesisChange} placeholder="Escolaridade, alfabetização, desempenho, adaptações ou demanda profissional." />
+                </AnamnesisSection>
 
-                <InputField
-                  label="Comportamento e Interação Social"
-                  type="textarea"
-                  name="behavior"
-                  value={anamnesisValues.behavior}
-                  onChange={handleAnamnesisChange}
-                  placeholder="Contato visual, atenção compartilhada, comportamento nas visitas domiciliares, interação..."
-                />
+                <AnamnesisSection title="4. Funções orofaciais, alimentação, respiração e voz" description="Preencha os itens relacionados à queixa e à faixa etária.">
+                  <InputField label="Alimentação e deglutição" type="textarea" name="feedingSwallowing" value={anamnesisValues.feedingSwallowing} onChange={handleAnamnesisChange} placeholder="Amamentação, consistências, seletividade, mastigação, tosse ou engasgos." />
+                  <InputField label="Motricidade orofacial e hábitos orais" type="textarea" name="oralMotorHabits" value={anamnesisValues.oralMotorHabits} onChange={handleAnamnesisChange} placeholder="Postura oral, salivação, mastigação, chupeta, mamadeira, sucção ou bruxismo." />
+                  <InputField label="Respiração e sono" type="textarea" name="breathingSleep" value={anamnesisValues.breathingSleep} onChange={handleAnamnesisChange} placeholder="Respiração oral, ronco, sono agitado ou pausas respiratórias." />
+                  <InputField label="Voz e demanda vocal" type="textarea" name="voiceHistory" value={anamnesisValues.voiceHistory} onChange={handleAnamnesisChange} placeholder="Rouquidão, fadiga, falhas, início, variação e uso profissional da voz." />
+                </AnamnesisSection>
 
-                <InputField
-                  label="Observações Clínicas e Diretrizes"
-                  type="textarea"
-                  name="clinicalNotes"
-                  value={anamnesisValues.clinicalNotes}
-                  onChange={handleAnamnesisChange}
-                  placeholder="Diretrizes iniciais do plano terapêutico..."
-                />
+                <AnamnesisSection title="5. Funcionalidade, participação e rede de cuidado" description="Impactos cotidianos, apoios, barreiras e atendimentos anteriores.">
+                  <InputField label="Comportamento e interação social" type="textarea" name="behavior" value={anamnesisValues.behavior} onChange={handleAnamnesisChange} placeholder="Atenção, interação, autorregulação e comportamento em diferentes ambientes." />
+                  <InputField label="Impacto funcional e participação" type="textarea" name="functionalImpact" value={anamnesisValues.functionalImpact} onChange={handleAnamnesisChange} placeholder="Impacto em casa, escola, trabalho e relações; facilitadores e barreiras." />
+                  <div className="md:col-span-2"><InputField label="Avaliações, terapias, exames e profissionais anteriores" type="textarea" name="previousCare" value={anamnesisValues.previousCare} onChange={handleAnamnesisChange} placeholder="Resultados, encaminhamentos e resposta aos tratamentos." /></div>
+                </AnamnesisSection>
+
+                <AnamnesisSection title="6. Segurança clínica e síntese profissional" description="Destaque intercorrências e separe o relato das observações profissionais.">
+                  <div className="md:col-span-2"><InputField label="Sinais de alerta e intercorrências" type="textarea" name="warningSigns" value={anamnesisValues.warningSigns} onChange={handleAnamnesisChange} placeholder="Ex.: perda súbita de habilidades, engasgos, falta de ar, perda de peso ou piora progressiva." /></div>
+                  <div className="md:col-span-2"><InputField label="Observações clínicas, condutas e encaminhamentos" type="textarea" rows={5} name="clinicalNotes" value={anamnesisValues.clinicalNotes} onChange={handleAnamnesisChange} placeholder="Observações do profissional, condutas e encaminhamentos iniciais." /></div>
+                </AnamnesisSection>
 
                 <div className="flex gap-3 pt-2">
                   <button
