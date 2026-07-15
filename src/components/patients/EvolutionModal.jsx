@@ -60,7 +60,12 @@ function AnamnesisSection({ title, description, children, open = false }) {
     <details open={open} className="group overflow-hidden rounded-xl border-2 border-noble-500 bg-white shadow-md dark:border-noble-400 dark:bg-white">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-4 border-l-[6px] border-plum-700 bg-white px-5 py-4 transition hover:bg-noble-100 focus:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-plum-500 dark:border-plum-700 dark:bg-white dark:hover:bg-noble-100">
         <span>
-          <span className="block text-lg font-extrabold leading-6 tracking-normal text-noble-950 dark:text-noble-950">{title}</span>
+          <span
+            className="block text-xl font-extrabold leading-7 tracking-normal !text-black dark:!text-black"
+            style={{ color: '#111111' }}
+          >
+            {title}
+          </span>
           {description && <span className="mt-1.5 block text-sm font-semibold leading-6 text-noble-700 dark:text-noble-700">{description}</span>}
         </span>
         <span aria-hidden="true" className="min-w-9 rounded-lg bg-plum-800 px-2 py-1 text-center text-xl font-black text-white transition group-open:rotate-45 dark:bg-plum-800 dark:text-white">+</span>
