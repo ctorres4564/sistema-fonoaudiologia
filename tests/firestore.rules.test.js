@@ -75,6 +75,37 @@ describe('patients', () => {
   })
 })
 
+describe('documents subcollection', () => {
+  beforeEach(async () => {
+    await seed('patients/patient-a', { name: 'Paciente A', userId: 'professional-a' })
+  })
+
+  it('permite que o proprietário do paciente crie, leia e exclua documentos dele', async () => {
+    const db = firestoreFor('professional-a')
+    const docRef = doc(db, 'patients/patient-a/documents/doc-1')
+
+    await assertSucceeds(setDoc(docRef, { name: 'laudo.pdf', url: 'https://example.com' }))
+    await assertSucceeds(getDoc(docRef))
+    await assertSucceeds(deleteDoc(docRef))
+  })
+
+  it('impede que outro profissional leia ou escreva documentos no paciente', async () => {
+    const db = firestoreFor('professional-b')
+    const docRef = doc(db, 'patients/patient-a/documents/doc-1')
+
+    await assertFails(setDoc(docRef, { name: 'laudo.pdf', url: 'https://example.com' }))
+    await assertFails(getDoc(docRef))
+  })
+
+  it('impede que usuários anônimos leiam ou escrevam documentos', async () => {
+    const anonymousDb = testEnv.unauthenticatedContext().firestore()
+    const docRef = doc(anonymousDb, 'patients/patient-a/documents/doc-1')
+
+    await assertFails(setDoc(docRef, { name: 'laudo.pdf', url: 'https://example.com' }))
+    await assertFails(getDoc(docRef))
+  })
+})
+
 describe('users', () => {
   it('permite criar somente o próprio perfil no plano demo', async () => {
     const db = firestoreFor('professional-a')

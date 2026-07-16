@@ -6,6 +6,7 @@ import { getAnamnesis, saveAnamnesis } from '../../services/anamnesisService'
 import { askGemini } from '../../services/geminiService'
 import { buildSanitizedPrompt, minimizeClinicalText, sanitizeAiPlainText } from '../../utils/aiPrivacy'
 import AIConsentModal from './AIConsentModal'
+import DocumentsTab from './DocumentsTab'
 
 const initialValues = {
   date: new Date().toISOString().split('T')[0],
@@ -506,9 +507,20 @@ function EvolutionModal({ isOpen, onClose, patient }) {
           >
             Anamnese (Avaliação Inicial)
           </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('documents')}
+            className={`pb-3 text-sm font-bold border-b-2 px-4 transition-colors ${
+              activeTab === 'documents'
+                ? 'border-plum-600 text-plum-600 dark:text-plum-400'
+                : 'border-transparent text-noble-500 dark:text-noble-400 hover:text-noble-700 dark:hover:text-noble-200'
+            }`}
+          >
+            Documentos e Anexos
+          </button>
         </div>
 
-        {activeTab === 'evolutions' ? (
+        {activeTab === 'evolutions' && (
           <div className="grid flex-1 grid-cols-1 gap-6 overflow-hidden md:grid-cols-2">
             <div className="flex flex-col border-r border-noble-100 dark:border-noble-800 pr-0 md:pr-6 overflow-y-auto">
               <h4 className="mb-4 text-base font-bold text-noble-800 dark:text-noble-100">Registrar Sessão</h4>
@@ -691,7 +703,9 @@ function EvolutionModal({ isOpen, onClose, patient }) {
               )}
             </div>
           </div>
-        ) : (
+        )}
+
+        {activeTab === 'anamnesis' && (
           <div className="flex-1 overflow-y-auto">
             {loadingAnamnesis ? (
               <div className="flex flex-1 items-center justify-center py-20">
@@ -773,6 +787,12 @@ function EvolutionModal({ isOpen, onClose, patient }) {
                 )}
               </form>
             )}
+          </div>
+        )}
+
+        {activeTab === 'documents' && (
+          <div className="flex-1 overflow-y-auto">
+            <DocumentsTab patient={patient} />
           </div>
         )}
       </div>
