@@ -75,6 +75,19 @@ describe('patients', () => {
   })
 })
 
+describe('audit logs', () => {
+  it('impede leitura, criação, alteração e exclusão pelo cliente', async () => {
+    await seed('auditLogs/event-1', { actorId: 'professional-a', action: 'record.viewed' })
+    const db = firestoreFor('professional-a')
+    const eventRef = doc(db, 'auditLogs/event-1')
+
+    await assertFails(getDoc(eventRef))
+    await assertFails(setDoc(doc(db, 'auditLogs/event-2'), { actorId: 'professional-a' }))
+    await assertFails(updateDoc(eventRef, { action: 'record.exported' }))
+    await assertFails(deleteDoc(eventRef))
+  })
+})
+
 describe('documents subcollection', () => {
   beforeEach(async () => {
     await seed('patients/patient-a', { name: 'Paciente A', userId: 'professional-a' })
@@ -103,6 +116,118 @@ describe('documents subcollection', () => {
 
     await assertFails(setDoc(docRef, { name: 'laudo.pdf', url: 'https://example.com' }))
     await assertFails(getDoc(docRef))
+  })
+})
+
+describe('evolution revision history', () => {
+  beforeEach(async () => {
+    await seed('patients/patient-a', { name: 'Paciente A', userId: 'professional-a' })
+    await seed('patients/patient-a/evolutions/evolution-1', { date: '2026-07-16', notes: 'Versão atual' })
+  })
+
+  it('permite ao proprietário criar e ler uma versão anterior imutável', async () => {
+    const db = firestoreFor('professional-a')
+    const revisionRef = doc(db, 'patients/patient-a/evolutions/evolution-1/revisions/revision-1')
+
+    await assertSucceeds(setDoc(revisionRef, { notes: 'Versão anterior', reason: 'Correção clínica' }))
+    await assertSucceeds(getDoc(revisionRef))
+    await assertFails(updateDoc(revisionRef, { notes: 'Tentativa de alteração' }))
+    await assertFails(deleteDoc(revisionRef))
+  })
+
+  it('impede outro profissional de acessar o histórico de retificações', async () => {
+    const db = firestoreFor('professional-b')
+    const revisionRef = doc(db, 'patients/patient-a/evolutions/evolution-1/revisions/revision-1')
+
+    await assertFails(setDoc(revisionRef, { notes: 'Versão anterior', reason: 'Correção clínica' }))
+    await assertFails(getDoc(revisionRef))
+  })
+})
+
+describe('progress analyses', () => {
+  beforeEach(async () => {
+    await seed('patients/patient-a', { name: 'Paciente A', userId: 'professional-a' })
+  })
+
+  it('permite ao proprietário salvar e editar pareceres do paciente', async () => {
+    const db = firestoreFor('professional-a')
+    const analysisRef = doc(db, 'patients/patient-a/progressAnalyses/analysis-1')
+    await assertSucceeds(setDoc(analysisRef, { text: 'Parecer revisado' }))
+    await assertSucceeds(updateDoc(analysisRef, { text: 'Parecer atualizado' }))
+    await assertSucceeds(getDoc(analysisRef))
+  })
+
+  it('impede outro profissional de acessar os pareceres', async () => {
+    const db = firestoreFor('professional-b')
+    const analysisRef = doc(db, 'patients/patient-a/progressAnalyses/analysis-1')
+    await assertFails(setDoc(analysisRef, { text: 'Acesso indevido' }))
+    await assertFails(getDoc(analysisRef))
+  })
+})
+
+describe('evolution drafts', () => {
+  beforeEach(async () => {
+    await seed('patients/patient-a', { name: 'Paciente A', userId: 'professional-a' })
+  })
+
+  it('permite ao proprietário salvar e editar rascunhos de evolução', async () => {
+    const db = firestoreFor('professional-a')
+    const draftRef = doc(db, 'patients/patient-a/evolutionDrafts/draft-1')
+    await assertSucceeds(setDoc(draftRef, { notes: 'Evolução em revisão' }))
+    await assertSucceeds(updateDoc(draftRef, { notes: 'Evolução revisada' }))
+    await assertSucceeds(getDoc(draftRef))
+  })
+
+  it('impede outro profissional de acessar rascunhos de evolução', async () => {
+    const db = firestoreFor('professional-b')
+    const draftRef = doc(db, 'patients/patient-a/evolutionDrafts/draft-1')
+    await assertFails(setDoc(draftRef, { notes: 'Acesso indevido' }))
+    await assertFails(getDoc(draftRef))
+  })
+})
+
+describe('therapeutic plans', () => {
+  beforeEach(async () => {
+    await seed('patients/patient-a', { name: 'Paciente A', userId: 'professional-a' })
+  })
+
+  it('permite ao proprietário criar, editar e consultar o plano terapêutico', async () => {
+    const db = firestoreFor('professional-a')
+    const planRef = doc(db, 'patients/patient-a/therapeuticPlan/current')
+
+    await assertSucceeds(setDoc(planRef, { status: 'Ativo', objectives: [] }))
+    await assertSucceeds(updateDoc(planRef, { generalObjective: 'Ampliar comunicação funcional' }))
+    await assertSucceeds(getDoc(planRef))
+  })
+
+  it('impede outro profissional de acessar o plano terapêutico', async () => {
+    const db = firestoreFor('professional-b')
+    const planRef = doc(db, 'patients/patient-a/therapeuticPlan/current')
+
+    await assertFails(setDoc(planRef, { status: 'Ativo', objectives: [] }))
+    await assertFails(getDoc(planRef))
+  })
+})
+
+describe('schedule status history', () => {
+  beforeEach(async () => {
+    await seed('schedules/schedule-1', { patientId: 'patient-a', userId: 'professional-a', status: 'Agendado' })
+  })
+
+  it('permite ao proprietário criar e ler eventos imutáveis de status', async () => {
+    const db = firestoreFor('professional-a')
+    const historyRef = doc(db, 'schedules/schedule-1/statusHistory/history-1')
+    await assertSucceeds(setDoc(historyRef, { previousStatus: 'Agendado', status: 'Confirmado' }))
+    await assertSucceeds(getDoc(historyRef))
+    await assertFails(updateDoc(historyRef, { status: 'Falta' }))
+    await assertFails(deleteDoc(historyRef))
+  })
+
+  it('impede outro profissional de acessar o histórico de status', async () => {
+    const db = firestoreFor('professional-b')
+    const historyRef = doc(db, 'schedules/schedule-1/statusHistory/history-1')
+    await assertFails(setDoc(historyRef, { status: 'Confirmado' }))
+    await assertFails(getDoc(historyRef))
   })
 })
 

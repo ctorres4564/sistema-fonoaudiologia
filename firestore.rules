@@ -24,9 +24,30 @@ service cloud.firestore {
       match /evolutions/{evolutionId} {
         allow read, write: if request.auth != null &&
           get(/databases/$(database)/documents/patients/$(patientId)).data.userId == request.auth.uid;
+
+        match /revisions/{revisionId} {
+          allow read, create: if request.auth != null &&
+            get(/databases/$(database)/documents/patients/$(patientId)).data.userId == request.auth.uid;
+          allow update, delete: if false;
+        }
       }
 
       match /anamnesis/{anamnesisId} {
+        allow read, write: if request.auth != null &&
+          get(/databases/$(database)/documents/patients/$(patientId)).data.userId == request.auth.uid;
+      }
+
+      match /progressAnalyses/{analysisId} {
+        allow read, write: if request.auth != null &&
+          get(/databases/$(database)/documents/patients/$(patientId)).data.userId == request.auth.uid;
+      }
+
+      match /evolutionDrafts/{draftId} {
+        allow read, write: if request.auth != null &&
+          get(/databases/$(database)/documents/patients/$(patientId)).data.userId == request.auth.uid;
+      }
+
+      match /therapeuticPlan/{planId} {
         allow read, write: if request.auth != null &&
           get(/databases/$(database)/documents/patients/$(patientId)).data.userId == request.auth.uid;
       }
@@ -43,6 +64,18 @@ service cloud.firestore {
       allow update: if request.auth != null &&
         resource.data.userId == request.auth.uid &&
         request.resource.data.userId == request.auth.uid;
+
+      match /statusHistory/{historyId} {
+        allow read, create: if request.auth != null &&
+          get(/databases/$(database)/documents/schedules/$(scheduleId)).data.userId == request.auth.uid;
+        allow update, delete: if false;
+      }
+    }
+
+    // Criados e consultados exclusivamente pelo backend autenticado. O cliente
+    // nunca pode alterar ou apagar a trilha de auditoria.
+    match /auditLogs/{eventId} {
+      allow read, create, update, delete: if false;
     }
 
     // Dados de cobrança, cotas e demais coleções só podem ser acessados pelo backend.
