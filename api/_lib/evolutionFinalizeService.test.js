@@ -10,7 +10,7 @@ const IDEMPOTENCY_KEY = '550e8400-e29b-41d4-a716-446655440000'
 
 function validPayload() {
   return {
-    operation: 'create', patientId: 'patient-1', scheduleId: null, expectedEvolutionRevision: null,
+    operation: 'create', patientId: 'patient-1', scheduleId: null, expectedEvolutionRevision: null, incrementSession: false,
     evolution: {
       schemaVersion: 2, sessionType: 'Terapia', date: '2026-07-20', duration: 50,
       clinicalActivity: 'Treino articulatório.', observedResponse: 'Produziu 7 de 10 palavras.',
@@ -45,6 +45,7 @@ describe('preparação segura', () => {
       patientId: 'patient-1',
       scheduleId: null,
       expectedEvolutionRevision: null,
+      incrementSession: false,
       evolution: { schemaVersion: 2, evolutionRevision: 1 },
       reviewedContentHash: expect.stringMatching(/^sha256:[0-9a-f]{64}$/),
       review: { counts: { initial: 0, final: 0, resolved: 0, ignored: 0 } },
@@ -60,6 +61,12 @@ describe('preparação segura', () => {
     prepare(payload, plan)
     expect(payload).toEqual(beforePayload)
     expect(plan).toEqual(beforePlan)
+  })
+
+  it.each([true, false])('preserva incrementSession=%s na operação normalizada', (incrementSession) => {
+    const payload = validPayload()
+    payload.incrementSession = incrementSession
+    expect(prepare(payload).incrementSession).toBe(incrementSession)
   })
 })
 
@@ -173,6 +180,16 @@ describe('canonicalização e SHA-256', () => {
   it('altera o hash quando conteúdo clínico muda', () => {
     const evolution = validPayload().evolution
     expect(calculateEvolutionSha256(evolution)).not.toBe(calculateEvolutionSha256({ ...evolution, nextStep: 'Outra conduta.' }))
+  })
+
+  it('não altera o hash clínico quando somente incrementSession muda', () => {
+    const withoutIncrement = validPayload().evolution
+    expect(calculateEvolutionSha256(withoutIncrement)).toBe(calculateEvolutionSha256({ ...withoutIncrement, incrementSession: true }))
+  })
+
+  it('não inclui incrementSession na representação clínica canonicalizada', async () => {
+    const { canonicalizeEvolutionForReview } = await import('../../src/utils/evolutionQuality.js')
+    expect(canonicalizeEvolutionForReview({ ...validPayload().evolution, incrementSession: true })).not.toHaveProperty('incrementSession')
   })
 
   it('corresponde ao vetor fixo aprovado', () => {

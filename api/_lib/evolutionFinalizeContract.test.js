@@ -14,6 +14,7 @@ export function validPayload() {
     patientId: 'patient-1',
     scheduleId: null,
     expectedEvolutionRevision: null,
+    incrementSession: false,
     evolution: {
       schemaVersion: 2,
       sessionType: 'Terapia',
@@ -110,6 +111,37 @@ describe('payload fechado', () => {
   it('rejeita contagens fornecidas pelo cliente', () => {
     const payload = validPayload()
     payload.reviewSession.counts = { final: 0 }
+    expectCode(() => validateFinalizePayload(payload), 'INVALID_PAYLOAD')
+  })
+
+  it.each([
+    ['ausente', (payload) => { delete payload.incrementSession }],
+    ['null', (payload) => { payload.incrementSession = null }],
+    ['string', (payload) => { payload.incrementSession = 'true' }],
+    ['número', (payload) => { payload.incrementSession = 1 }],
+  ])('rejeita incrementSession %s', (_label, mutate) => {
+    const payload = validPayload()
+    mutate(payload)
+    expectCode(() => validateFinalizePayload(payload), 'INVALID_PAYLOAD')
+  })
+
+  it.each([true, false])('aceita evolução avulsa com incrementSession=%s', (incrementSession) => {
+    const payload = validPayload()
+    payload.incrementSession = incrementSession
+    expect(validateFinalizePayload(payload).incrementSession).toBe(incrementSession)
+  })
+
+  it('aceita agendamento somente com incrementSession=true', () => {
+    const payload = validPayload()
+    payload.scheduleId = 'schedule-1'
+    payload.incrementSession = true
+    expect(validateFinalizePayload(payload).incrementSession).toBe(true)
+  })
+
+  it('rejeita agendamento com incrementSession=false', () => {
+    const payload = validPayload()
+    payload.scheduleId = 'schedule-1'
+    payload.incrementSession = false
     expectCode(() => validateFinalizePayload(payload), 'INVALID_PAYLOAD')
   })
 

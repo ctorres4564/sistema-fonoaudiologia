@@ -51,6 +51,7 @@ export function prepareEvolutionFinalizeOperation({ method, idempotencyKey, payl
     patientId: validated.patientId,
     scheduleId: validated.scheduleId,
     expectedEvolutionRevision: null,
+    incrementSession: validated.incrementSession,
     evolution,
     reviewedContentHash: calculateEvolutionSha256(reviewableEvolution),
     review: {

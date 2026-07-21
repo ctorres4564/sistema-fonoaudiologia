@@ -187,6 +187,10 @@ export function validateFinalizePayload(payload) {
   if (payload.operation !== 'create' || payload.expectedEvolutionRevision !== null) throw finalizeError(FINALIZE_ERROR_CODES.INVALID_PAYLOAD, 'invalid_operation')
   assertDocumentId(payload.patientId)
   assertDocumentId(payload.scheduleId, true)
+  if (typeof payload.incrementSession !== 'boolean') throw finalizeError(FINALIZE_ERROR_CODES.INVALID_PAYLOAD, 'invalid_increment_session')
+  if (payload.scheduleId !== null && payload.incrementSession !== true) {
+    throw finalizeError(FINALIZE_ERROR_CODES.INVALID_PAYLOAD, 'scheduled_session_must_increment')
+  }
   assertExactFields(payload.evolution, EVOLUTION_FIELDS)
   assertCalendarDate(payload.evolution.date)
   assertString(payload.evolution.clinicalActivity, FINALIZE_LIMITS.clinicalActivityLength, { reason: 'invalid_clinical_activity' })
@@ -204,6 +208,7 @@ export function validateFinalizePayload(payload) {
     patientId: payload.patientId,
     scheduleId: payload.scheduleId,
     expectedEvolutionRevision: null,
+    incrementSession: payload.incrementSession,
     evolution: canonicalEvolution,
     reviewSession,
   }

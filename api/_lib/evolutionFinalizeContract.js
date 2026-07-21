@@ -20,7 +20,7 @@ export const FINALIZE_LIMITS = Object.freeze({
   durationMinutes: MAX_EVOLUTION_DURATION_MINUTES,
 })
 
-export const ROOT_FIELDS = Object.freeze(['operation', 'patientId', 'scheduleId', 'expectedEvolutionRevision', 'evolution', 'reviewSession'])
+export const ROOT_FIELDS = Object.freeze(['operation', 'patientId', 'scheduleId', 'expectedEvolutionRevision', 'incrementSession', 'evolution', 'reviewSession'])
 export const EVOLUTION_FIELDS = Object.freeze(['schemaVersion', 'sessionType', 'date', 'duration', 'clinicalActivity', 'observedResponse', 'nextStep', 'notes', 'applicability', 'objectiveProgress'])
 export const APPLICABILITY_FIELDS = Object.freeze(['clinicalActivity', 'observedResponse'])
 export const APPLICABILITY_ENTRY_FIELDS = Object.freeze(['applicable', 'reasonCode', 'note'])
