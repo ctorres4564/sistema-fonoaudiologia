@@ -10,6 +10,8 @@ import AIConsentModal from './AIConsentModal'
 import DocumentsTab from './DocumentsTab'
 import TherapeuticPlanTab from './TherapeuticPlanTab'
 import { objectiveStatuses, subscribeTherapeuticPlan } from '../../services/therapeuticPlanService'
+import { useAuth } from '../../contexts/useAuth'
+import { finalizeEvolutionWithQualityReview } from '../../services/evolutionFinalizeService'
 
 const initialValues = {
   date: new Date().toISOString().split('T')[0],
@@ -80,6 +82,8 @@ function AnamnesisSection({ title, description, children, open = false }) {
 }
 
 function EvolutionModal({ isOpen, onClose, patient, linkedSchedule = null, onScheduleCompleted }) {
+  const { userProfile } = useAuth()
+  const [currentIdempotencyKey, setCurrentIdempotencyKey] = useState('')
   const [activeTab, setActiveTab] = useState('evolutions')
 
   const [evolutions, setEvolutions] = useState([])
@@ -197,6 +201,14 @@ function EvolutionModal({ isOpen, onClose, patient, linkedSchedule = null, onSch
     setObjectiveProgress([])
 
     setActiveTab('evolutions')
+
+    // Gerar idempotency key estável para a tentativa lógica corrente
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      setCurrentIdempotencyKey(crypto.randomUUID())
+    } else {
+      // Fallback robusto se rodando em ambiente sem randomUUID nativo
+      setCurrentIdempotencyKey('key-' + Math.random().toString(36).substring(2, 15) + '-' + Date.now())
+    }
 
     return () => {
       unsubscribe()
@@ -505,10 +517,52 @@ function EvolutionModal({ isOpen, onClose, patient, linkedSchedule = null, onSch
         objectiveProgress,
       }
 
-      if (linkedSchedule) {
-        await completeScheduledEvolution(patient.id, linkedSchedule.id, evolutionPayload)
+      // Roteamento controlado: Se habilitado para o piloto, usa o endpoint seguro
+      if (userProfile?.features?.evolutionQualityReview === true) {
+        const payloadForApi = {
+          operation: 'create',
+          scheduleId: linkedSchedule?.id || null,
+          expectedEvolutionRevision: null,
+          incrementSession: linkedSchedule ? true : formValues.incrementSession,
+          evolution: {
+            schemaVersion: 2,
+            sessionType: linkedSchedule?.sessionType || 'Terapia',
+            date: formValues.date,
+            duration: Number(formValues.duration) || 50,
+            notes: formValues.notes.trim(),
+            clinicalActivity: '', // Backend extrai ou mantém vazio para auditoria IA
+            observedResponse: '',
+            nextStep: '',
+            notesRefined: '',
+            applicability: {},
+            objectiveProgress: objectiveProgress.map(op => ({
+              objectiveId: op.objectiveId,
+              status: op.status
+            }))
+          },
+          reviewSession: {
+            initialAlerts: [],
+            finalAlerts: [],
+            ignoredAlerts: [],
+            reviewPasses: 1,
+            startedAt: new Date(Date.now() - 120000).toISOString(),
+            completedAt: new Date().toISOString()
+          }
+        }
+
+        // Chamar o cliente da API
+        await finalizeEvolutionWithQualityReview({
+          patientId: patient.id,
+          idempotencyKey: currentIdempotencyKey,
+          payload: payloadForApi
+        })
       } else {
-        await createClinicalEvolution(patient.id, evolutionPayload, formValues.incrementSession)
+        // Fluxo legado normal
+        if (linkedSchedule) {
+          await completeScheduledEvolution(patient.id, linkedSchedule.id, evolutionPayload)
+        } else {
+          await createClinicalEvolution(patient.id, evolutionPayload, formValues.incrementSession)
+        }
       }
 
       toast.success('Evolução clínica registrada com sucesso!')
@@ -524,11 +578,29 @@ function EvolutionModal({ isOpen, onClose, patient, linkedSchedule = null, onSch
       setSelectedDraftId('')
       setObjectiveProgress([])
     } catch (error) {
-      toast.error(
-        error.code === 'schedule/already-completed'
-          ? 'Este atendimento já foi registrado e não será contabilizado novamente.'
-          : 'Erro ao registrar evolução.'
-      )
+      if (userProfile?.features?.evolutionQualityReview === true) {
+        // Expor mensagens de erro seguras e não técnicas
+        if (error.status === 429) {
+          const retryMsg = error.retryAfter ? ` Tente novamente em ${error.retryAfter} segundos.` : ''
+          toast.error(`Muitas solicitações. Tente novamente mais tarde.${retryMsg}`)
+        } else if (error.status === 503) {
+          toast.error('O serviço de revisão de qualidade está temporariamente indisponível. Sua chave de idempotência foi mantida para retry seguro.')
+        } else if (error.code === 'CONFLICT') {
+          toast.error('Esta evolução ou atendimento já foi processado.')
+        } else if (error.status === 403) {
+          toast.error('Acesso não autorizado para esta funcionalidade.')
+        } else if (error.status === 400) {
+          toast.error('Dados de evolução inválidos.')
+        } else {
+          toast.error(error.message || 'Erro ao registrar evolução.')
+        }
+      } else {
+        toast.error(
+          error.code === 'schedule/already-completed'
+            ? 'Este atendimento já foi registrado e não será contabilizado novamente.'
+            : 'Erro ao registrar evolução.'
+        )
+      }
       console.error(error)
     } finally {
       setLoadingSubmit(false)

@@ -8,6 +8,12 @@ export const FINALIZE_ERROR_CODES = Object.freeze({
   INVALID_DECISION: 'INVALID_DECISION',
   OBJECTIVE_CONFLICT: 'OBJECTIVE_CONFLICT',
   LIMIT_EXCEEDED: 'LIMIT_EXCEEDED',
+  UNAUTHENTICATED: 'UNAUTHENTICATED',
+  FORBIDDEN: 'FORBIDDEN',
+  NOT_FOUND: 'NOT_FOUND',
+  CONFLICT: 'CONFLICT',
+  RATE_LIMITED: 'RATE_LIMITED',
+  SERVICE_UNAVAILABLE: 'SERVICE_UNAVAILABLE',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
 })
 
@@ -21,6 +27,12 @@ const ERROR_DEFINITIONS = Object.freeze({
   INVALID_DECISION: [422, 'Decisão de revisão inválida.'],
   OBJECTIVE_CONFLICT: [409, 'Conflito nos objetivos relacionados.'],
   LIMIT_EXCEEDED: [413, 'Limite da solicitação excedido.'],
+  UNAUTHENTICATED: [401, 'Sessão inválida ou expirada.'],
+  FORBIDDEN: [403, 'Acesso não autorizado.'],
+  NOT_FOUND: [404, 'Recurso não encontrado.'],
+  CONFLICT: [409, 'A operação está em conflito com o estado atual.'],
+  RATE_LIMITED: [429, 'Muitas solicitações. Tente novamente mais tarde.'],
+  SERVICE_UNAVAILABLE: [503, 'Recurso temporariamente indisponível.'],
   INTERNAL_ERROR: [500, 'Não foi possível processar a solicitação.'],
 })
 

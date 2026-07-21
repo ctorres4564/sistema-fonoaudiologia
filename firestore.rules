@@ -7,10 +7,24 @@ service cloud.firestore {
         request.auth.uid == userId &&
         request.resource.data.uid == userId &&
         request.resource.data.plan == 'demo' &&
-        request.resource.data.keys().hasOnly(['uid', 'name', 'email', 'plan', 'createdAt']);
+        (!('features' in request.resource.data) || request.resource.data.features == null || !('evolutionQualityReview' in request.resource.data.features) || request.resource.data.features.evolutionQualityReview == false) &&
+        request.resource.data.keys().hasOnly(['uid', 'name', 'email', 'plan', 'features', 'createdAt']);
       allow update: if request.auth != null &&
         request.auth.uid == userId &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'email', 'updatedAt']);
+        (
+          (
+            !('features' in request.resource.data) && !('features' in resource.data)
+          ) || (
+            (
+              !('features' in resource.data) || resource.data.features == null || !('evolutionQualityReview' in resource.data.features)
+            ) ? (
+              !('features' in request.resource.data) || request.resource.data.features == null || !('evolutionQualityReview' in request.resource.data.features) || request.resource.data.features.evolutionQualityReview == false
+            ) : (
+              ('features' in request.resource.data) && request.resource.data.features != null && ('evolutionQualityReview' in request.resource.data.features) && request.resource.data.features.evolutionQualityReview == resource.data.features.evolutionQualityReview
+            )
+          )
+        ) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'email', 'features', 'updatedAt']);
       allow delete: if false;
     }
 
@@ -29,6 +43,13 @@ service cloud.firestore {
           allow read, create: if request.auth != null &&
             get(/databases/$(database)/documents/patients/$(patientId)).data.userId == request.auth.uid;
           allow update, delete: if false;
+        }
+
+        // Coleção de qualityReviews protegida contra escritas diretas do cliente
+        match /qualityReviews/{reviewId} {
+          allow read: if request.auth != null &&
+            get(/databases/$(database)/documents/patients/$(patientId)).data.userId == request.auth.uid;
+          allow write: if false;
         }
       }
 
@@ -70,6 +91,15 @@ service cloud.firestore {
           get(/databases/$(database)/documents/schedules/$(scheduleId)).data.userId == request.auth.uid;
         allow update, delete: if false;
       }
+    }
+
+    // Coleções técnicas da Fase 2B (idempotência e rate limits) protegidas contra escritas diretas do cliente
+    match /evolutionFinalizeOperations/{operationId} {
+      allow read, write: if false;
+    }
+
+    match /evolutionFinalizeRateLimits/{identifier} {
+      allow read, write: if false;
     }
 
     // Criados e consultados exclusivamente pelo backend autenticado. O cliente
